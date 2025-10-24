@@ -1,0 +1,30 @@
+<!-- Simple SVG icon that can be converted to PNG -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#667eea" rx="80"/>
+  
+  <!-- Main icon design -->
+  <g transform="translate(128, 128)">
+    <!-- Building/School icon -->
+    <rect x="0" y="100" width="256" height="156" fill="white" rx="8"/>
+    
+    <!-- Roof -->
+    <polygon points="128,50 30,100 226,100" fill="white"/>
+    
+    <!-- Door -->
+    <rect x="110" y="180" width="36" height="76" fill="#667eea" rx="4"/>
+    <circle cx="140" cy="215" r="3" fill="white"/>
+    
+    <!-- Windows -->
+    <rect x="40" y="140" width="30" height="30" fill="#667eea" rx="4"/>
+    <rect x="186" y="140" width="30" height="30" fill="#667eea" rx="4"/>
+    
+    <!-- Arrow indicating movement -->
+    <g transform="translate(200, 200)">
+      <path d="M0,0 L20,0 L15,-8 M20,0 L15,8" stroke="white" stroke-width="3" fill="none"/>
+    </g>
+  </g>
+  
+  <!-- Text -->
+  <text x="256" y="450" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="32" font-weight="bold">A&amp;D</text>
+</svg>

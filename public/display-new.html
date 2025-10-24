@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Vehicle Arrivals - Display</title>
+    <meta name="description" content="Display view showing vehicles that have arrived">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Safari specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Vehicle Arrivals">
+    
+    <!-- Android/Chrome specific -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Vehicle Arrivals">
+    <meta name="theme-color" content="#60a5fa">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="display-new-styles.css">
+</head>
+<body>
+    <!-- Side Menu -->
+    <div class="side-menu" id="sideMenu">
+        <div class="side-menu-content">
+            <h3>📋 Controls</h3>
+            
+            <div class="control-group">
+                <label>Filter by Vehicle Type:</label>
+                <select id="vehicleTypeFilter" class="filter-select">
+                    <option value="">All Vehicles</option>
+                    <option value="bus">Buses Only</option>
+                    <option value="taxi">Taxis Only</option>
+                    <option value="parent">Parent Drop Only</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label id="pathwayFilterLabel">Filter by Pathway:</label>
+                <select id="pathwayFilter" class="filter-select">
+                    <option value="">All Pathways</option>
+                    <option value="Preparations">Preparations</option>
+                    <option value="Horizons">Horizons</option>
+                    <option value="Explorers">Explorers</option>
+                    <option value="Futures">Futures</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="arrivedOnlyFilter" checked>
+                    <span class="checkmark"></span>
+                    Show Only Arrived Taxis
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <div class="auto-refresh-control">
+                    <span>Auto-refresh: Every 10s</span>
+                    <span class="refresh-indicator" id="refreshIndicator">🔄</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn btn-secondary" onclick="refreshDisplay()">
+                    <span class="btn-icon">🔄</span>
+                    Refresh Now
+                </button>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn btn-secondary" onclick="openAdminView()">
+                    <span class="btn-icon">⚙️</span>
+                    Open Admin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Toggle Button -->
+    <button class="menu-toggle" id="menuToggle">☰</button>
+
+    <!-- Main Container -->
+    <div class="main-container" id="mainContainer">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-content">
+                    <h1 class="title">Vehicle Arrivals</h1>
+                </div>
+                <div class="current-time" id="currentTime"></div>
+                
+                <div class="header-stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="arrivedVehicles">0</div>
+                        <div class="stat-label">Vehicles Arrived</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalVehicles">0</div>
+                        <div class="stat-label">Total Vehicles</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="arrivedStudents">0</div>
+                        <div class="stat-label">Students Arrived</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bus Row Section -->
+            <div class="bus-section">
+                <h2 class="section-title">🚌 School Buses</h2>
+                <div class="bus-row" id="busRow">
+                    <!-- Buses will be populated here -->
+                </div>
+            </div>
+
+            <!-- Taxi Grid Section -->
+            <div class="taxi-section">
+                <h2 class="section-title">🚕 Taxis & Parent Drop-offs</h2>
+                <div class="taxi-grid" id="taxiGrid">
+                    <!-- Taxis will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-indicator hidden" id="loadingIndicator">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Refreshing...</div>
+    </div>
+
+    <script src="display-new-script.js"></script>
+</body>
+</html>

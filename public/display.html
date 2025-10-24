@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Arrived Students - Display</title>
+    <meta name="description" content="Display view showing students who have arrived">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Safari specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Student Arrivals">
+    
+    <!-- Android/Chrome specific -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Student Arrivals">
+    <meta name="theme-color" content="#48bb78">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="display-styles.css">
+</head>
+<body>
+    <!-- Side Menu -->
+    <div class="side-menu" id="sideMenu">
+        <div class="side-menu-content">
+            <h3>📋 Controls</h3>
+            
+            <div class="control-group">
+                <label>Filter by Transport:</label>
+                <select id="transportFilter" class="filter-select">
+                    <option value="">All Transport</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Filter by Pathway:</label>
+                <select id="pathwayFilter" class="filter-select">
+                    <option value="">All Pathways</option>
+                    <option value="Preparations">Preparations</option>
+                    <option value="Horizons">Horizons</option>
+                    <option value="Explorers">Explorers</option>
+                    <option value="Futures">Futures</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn btn-secondary" onclick="refreshDisplay()">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Refresh</span>
+                </button>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn btn-secondary" onclick="openAdminView()">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">Admin View</span>
+                </button>
+            </div>
+            
+            <div class="control-group">
+                <div class="auto-refresh-control">
+                    <span class="refresh-indicator" id="refreshIndicator">●</span>
+                    <span>Auto-refresh: ON</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Menu Toggle Button -->
+    <button class="menu-toggle" id="menuToggle">
+        ☰
+    </button>
+    
+    <!-- Main Content Area -->
+    <div class="main-container" id="mainContainer">
+        <div class="container">
+            <header class="header">
+                <div class="header-content">
+                    <h1 class="title">Students Arrived Today</h1>
+                    <div class="current-time" id="currentTime"></div>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="arrivedCount">0</div>
+                        <div class="stat-label">Students Arrived</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div class="stat-label">Total Expected</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="percentageCount">0%</div>
+                        <div class="stat-label">Attendance Rate</div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <!-- Full Screen Students Display -->
+                <div class="students-section">
+                    <div class="students-grid" id="studentsGrid">
+                        <!-- Arrived students will be populated here -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading-indicator hidden">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+    </div>
+
+    <script src="display-script.js"></script>
+</body>
+</html>

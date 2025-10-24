@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Admin - Student Arrivals</title>
+    <meta name="description" content="Admin interface for tracking student arrivals">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Safari specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Student Arrivals Admin">
+    <meta name="apple-touch-fullscreen" content="yes">
+    
+    <!-- iOS app icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    
+    <!-- Android/Chrome specific -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Arrivals Admin">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="admin-styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">Student Arrivals - Admin</h1>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="arrivedCount">0</span>
+                        <span class="stat-label">Arrived</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalCount">0</span>
+                        <span class="stat-label">Total</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="openDisplayView()">
+                    <span class="btn-icon">📺</span>
+                    <span class="btn-text">Display View</span>
+                </button>
+                <button class="btn btn-secondary" onclick="openStudentManager()">
+                    <span class="btn-icon">👥</span>
+                    <span class="btn-text">Manage Students</span>
+                </button>
+                <button class="btn btn-secondary" onclick="resetAllArrivals()">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reset Day</span>
+                </button>
+                <button class="btn btn-secondary" onclick="refreshStudents()">
+                    <span class="btn-icon">↻</span>
+                    <span class="btn-text">Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Search and Filter -->
+            <div class="controls-section">
+                <div class="search-group">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="Search students..."
+                        autocomplete="off"
+                    >
+                </div>
+                <div class="filter-group">
+                    <select id="transportFilter" class="filter-select">
+                        <option value="">All Transport</option>
+                    </select>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Students</option>
+                        <option value="arrived">Arrived</option>
+                        <option value="not-arrived">Not Arrived</option>
+                        <option value="absent">Absent</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Student List -->
+            <div class="students-section">
+                <div class="students-grid" id="studentsGrid">
+                    <!-- Students will be populated here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- Status Message -->
+    <div id="statusMessage" class="status-message hidden"></div>
+
+    <!-- Student Management Modal -->
+    <div id="studentModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Manage Students</h2>
+                <button class="close-btn" onclick="closeStudentModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Add/Edit Student Form -->
+                <div class="student-form">
+                    <h3 id="formTitle">Add New Student</h3>
+                    <form id="studentForm">
+                        <input type="hidden" id="studentId">
+                        
+                        <div class="form-group">
+                            <label for="studentNameInput">Student Name *</label>
+                            <input type="text" id="studentNameInput" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="studentTransport">Transport *</label>
+                            <select id="studentTransport" required>
+                                <option value="">Select transport...</option>
+                                <option value="Bus 8">Bus 8</option>
+                                <option value="Bus 12">Bus 12</option>
+                                <option value="Bus 15">Bus 15</option>
+                                <option value="Taxi 3">Taxi 3</option>
+                                <option value="Taxi 5">Taxi 5</option>
+                                <option value="Taxi 7">Taxi 7</option>
+                                <option value="Parent Drop">Parent Drop</option>
+                                <option value="custom">Other (specify below)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="customTransportGroup" style="display: none;">
+                            <label for="customTransport">Custom Transport</label>
+                            <input type="text" id="customTransport" placeholder="Enter transport details">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="studentPathway">Pathway *</label>
+                            <select id="studentPathway" required>
+                                <option value="">Select pathway...</option>
+                                <option value="Preparations">Preparations</option>
+                                <option value="Horizons">Horizons</option>
+                                <option value="Explorers">Explorers</option>
+                                <option value="Futures">Futures</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveButton">Add Student</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- CSV Import Section -->
+                <div class="csv-import-section">
+                    <h3>📁 Bulk Import from CSV</h3>
+                    <p>Import multiple students at once using a CSV file.</p>
+                    
+                    <div class="csv-actions">
+                        <button type="button" class="btn btn-secondary" onclick="downloadCSVTemplate()">
+                            📥 Download Template
+                        </button>
+                        <div class="file-upload-container">
+                            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('csvFileInput').click()">
+                                📤 Upload CSV File
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="csvPreview" class="csv-preview hidden">
+                        <h4>Preview Import Data</h4>
+                        <div id="csvPreviewTable"></div>
+                        <div class="csv-preview-actions">
+                            <button type="button" class="btn btn-secondary" onclick="cancelCSVImport()">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="confirmCSVImport()" id="confirmImportBtn">Import Students</button>
+                        </div>
+                    </div>
+                    
+                    <div id="csvResults" class="csv-results hidden">
+                        <h4>Import Results</h4>
+                        <div id="csvResultsContent"></div>
+                    </div>
+                </div>
+                
+                <!-- Student List for Management -->
+                <div class="student-management-list">
+                    <div class="list-header">
+                        <h3>Current Students</h3>
+                        <div class="list-actions">
+                            <input type="text" id="managementSearch" placeholder="Search students..." class="search-small">
+                        </div>
+                    </div>
+                    
+                    <div class="student-list" id="managementStudentList">
+                        <!-- Students for management will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>

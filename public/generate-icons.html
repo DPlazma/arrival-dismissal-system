@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        .icon-set { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>This page generates all required icons for the PWA from the SVG template.</p>
+    
+    <div class="icon-set">
+        <h2>Generated Icons:</h2>
+        <div id="iconContainer"></div>
+    </div>
+    
+    <script>
+        const sizes = [57, 60, 72, 76, 96, 114, 120, 128, 144, 152, 180, 192, 384, 512];
+        const iconContainer = document.getElementById('iconContainer');
+        
+        // SVG content
+        const svgContent = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+                <rect width="512" height="512" fill="#667eea" rx="80"/>
+                <g transform="translate(128, 128)">
+                    <rect x="0" y="100" width="256" height="156" fill="white" rx="8"/>
+                    <polygon points="128,50 30,100 226,100" fill="white"/>
+                    <rect x="110" y="180" width="36" height="76" fill="#667eea" rx="4"/>
+                    <circle cx="140" cy="215" r="3" fill="white"/>
+                    <rect x="40" y="140" width="30" height="30" fill="#667eea" rx="4"/>
+                    <rect x="186" y="140" width="30" height="30" fill="#667eea" rx="4"/>
+                    <g transform="translate(200, 200)">
+                        <path d="M0,0 L20,0 L15,-8 M20,0 L15,8" stroke="white" stroke-width="3" fill="none"/>
+                    </g>
+                </g>
+                <text x="256" y="450" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="32" font-weight="bold">A&D</text>
+            </svg>
+        `;
+        
+        function generateIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            const img = new Image();
+            const svgBlob = new Blob([svgContent], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, size, size);
+                URL.revokeObjectURL(url);
+                
+                // Add to display
+                const div = document.createElement('div');
+                div.style.display = 'inline-block';
+                div.style.margin = '10px';
+                div.style.textAlign = 'center';
+                
+                const label = document.createElement('div');
+                label.textContent = `${size}x${size}`;
+                label.style.fontSize = '12px';
+                label.style.marginBottom = '5px';
+                
+                canvas.style.width = '64px';
+                canvas.style.height = '64px';
+                canvas.style.display = 'block';
+                canvas.style.margin = '0 auto';
+                
+                // Add download link
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = `icon-${size}x${size}.png`;
+                link.textContent = 'Download';
+                link.style.fontSize = '10px';
+                link.style.display = 'block';
+                link.style.marginTop = '5px';
+                
+                div.appendChild(label);
+                div.appendChild(canvas);
+                div.appendChild(link);
+                iconContainer.appendChild(div);
+            };
+            
+            img.src = url;
+        }
+        
+        // Generate all icon sizes
+        sizes.forEach(size => generateIcon(size));
+        
+        // Also generate favicon
+        generateIcon(32);
+        generateIcon(16);
+    </script>
+</body>
+</html>

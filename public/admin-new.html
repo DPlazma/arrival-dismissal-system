@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Vehicle Management - Admin</title>
+    <meta name="description" content="Admin interface for managing vehicle arrivals">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Safari specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Vehicle Admin">
+    
+    <!-- Android/Chrome specific -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Vehicle Admin">
+    <meta name="theme-color" content="#60a5fa">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="admin-new-styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1 class="title">Vehicle Management</h1>
+            <div class="header-actions">
+                <div class="current-time" id="currentTime"></div>
+                <button class="btn btn-secondary" onclick="openDisplayView()">
+                    <span class="btn-icon">📺</span>
+                    View Display
+                </button>
+                <button class="btn btn-secondary" onclick="showStudentManagementModal()">
+                    <span class="btn-icon">⚙</span>
+                    Manage
+                </button>
+            </div>
+        </div>
+        
+        <div class="header-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalVehicles">0</div>
+                <div class="stat-label">Total Vehicles</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="arrivedVehicles">0</div>
+                <div class="stat-label">Arrived</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="partialVehicles">0</div>
+                <div class="stat-label">Partial</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="absentVehicles">0</div>
+                <div class="stat-label">Absent</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="control-group">
+            <label for="sortBy">Sort By:</label>
+            <select id="sortBy" class="filter-select">
+                <option value="numerical">Numerical Order</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="status">By Status</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="vehicleFilter">Filter Vehicles:</label>
+            <select id="vehicleFilter" class="filter-select">
+                <option value="">All Vehicles</option>
+                <option value="bus">Buses Only</option>
+                <option value="taxi">Taxis Only</option>
+                <option value="parent">Parent Drop Only</option>
+                <option value="arrived">Arrived</option>
+                <option value="partial">Partial</option>
+                <option value="not-arrived">Not Arrived</option>
+                <option value="absent">Absent</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="pathwayFilter">Filter by Pathway:</label>
+            <select id="pathwayFilter" class="filter-select">
+                <option value="">All Pathways</option>
+                <option value="Preparations">Preparations</option>
+                <option value="Horizons">Horizons</option>
+                <option value="Explorers">Explorers</option>
+                <option value="Futures">Futures</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <button class="btn btn-primary" onclick="refreshData()">
+                <span class="btn-icon">🔄</span>
+                Refresh
+            </button>
+        </div>
+        
+        <div class="control-group">
+            <button class="btn btn-warning" onclick="resetAllVehicles()">
+                <span class="btn-icon">🔄</span>
+                Reset All
+            </button>
+        </div>
+    </div>
+
+    <!-- Bus Section -->
+    <div class="bus-admin-section">
+        <h2 class="section-title">🚌 School Buses</h2>
+        <p class="section-description">Click buses to toggle: Not Arrived → Arrived → Absent</p>
+        <div class="bus-admin-grid" id="busAdminGrid">
+            <!-- Buses will be populated here -->
+        </div>
+    </div>
+
+    <!-- Taxi Section -->
+    <div class="taxi-admin-section">
+        <h2 class="section-title">🚕 Taxis & Parent Drop-offs</h2>
+        <p class="section-description">Click individual students to toggle their status</p>
+        <div class="taxi-admin-grid" id="taxiAdminGrid">
+            <!-- Taxis will be populated here -->
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-indicator hidden" id="loadingIndicator">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div class="toast hidden" id="toast">
+        <div class="toast-content"></div>
+    </div>
+
+    <!-- Student Management Modal -->
+    <div class="modal hidden" id="studentManagementModal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Management Center</h3>
+                <button class="modal-close" onclick="hideStudentManagementModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="student-management-tabs">
+                    <button class="tab-btn main-tab active" onclick="switchMainTab('vehicles')">Manage Vehicles</button>
+                    <button class="tab-btn main-tab" onclick="switchMainTab('students')">Manage Students</button>
+                    <button class="tab-btn main-tab" onclick="switchMainTab('settings')">Settings</button>
+                </div>
+                
+                <!-- Vehicle Management Sub-tabs -->
+                <div class="sub-tabs-container" id="vehicles-subtabs">
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" onclick="switchSubTab('vehicles', 'current')">Current Vehicles</button>
+                        <button class="sub-tab-btn" onclick="switchSubTab('vehicles', 'add')">Add Vehicle</button>
+                    </div>
+                </div>
+                
+                <!-- Student Management Sub-tabs -->
+                <div class="sub-tabs-container hidden" id="students-subtabs">
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" onclick="switchSubTab('students', 'current')">Current Students</button>
+                        <button class="sub-tab-btn" onclick="switchSubTab('students', 'csv')">CSV Import</button>
+                        <button class="sub-tab-btn" onclick="switchSubTab('students', 'bulk')">Bulk Add</button>
+                    </div>
+                </div>
+                
+                <!-- Settings Sub-tabs -->
+                <div class="sub-tabs-container hidden" id="settings-subtabs">
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" onclick="switchSubTab('settings', 'general')">General</button>
+                        <button class="sub-tab-btn" onclick="switchSubTab('settings', 'theme')">Theme</button>
+                        <button class="sub-tab-btn" onclick="switchSubTab('settings', 'security')">Security</button>
+                    </div>
+                </div>
+                
+                <!-- Vehicle Management Content -->
+                <div class="main-content active" id="vehicles-content">
+                    <!-- Current Vehicles Sub-tab -->
+                    <div class="sub-content active" id="vehicles-current">
+                        <div class="management-header">
+                            <h4>Current Vehicles</h4>
+                            <div class="management-controls">
+                                <input type="text" id="vehicleSearchInput" placeholder="Search vehicles..." onkeyup="filterVehicleList()">
+                                <select id="vehicleTypeFilter" onchange="filterVehicleList()">
+                                    <option value="">All Types</option>
+                                    <option value="bus">Buses</option>
+                                    <option value="taxi">Taxis</option>
+                                    <option value="parent">Parent Drop-offs</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="bulk-actions">
+                            <label class="select-all">
+                                <input type="checkbox" id="selectAllVehicles" onchange="toggleSelectAllVehicles()">
+                                Select All
+                            </label>
+                            <button type="button" class="btn btn-danger btn-sm" id="bulkDeleteVehiclesBtn" onclick="bulkDeleteVehicles()" disabled>
+                                <span class="btn-icon">🗑️</span>
+                                Delete Selected
+                            </button>
+                        </div>
+                        
+                        <div class="vehicle-list" id="vehicleManagementList">
+                            <!-- Vehicle list will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Add Vehicle Sub-tab -->
+                    <div class="sub-content" id="vehicles-add">
+                        <h4>Add New Vehicle</h4>
+                        <div class="form-group">
+                            <label for="newVehicleType">Vehicle Type:</label>
+                            <select id="newVehicleType" required>
+                                <option value="">Select Type</option>
+                                <option value="bus">Bus</option>
+                                <option value="taxi">Taxi</option>
+                                <option value="parent">Parent Drop-off</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newVehicleNumber">Vehicle Number:</label>
+                            <input type="text" id="newVehicleNumber" placeholder="e.g., 50, 1, Drop-off" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newVehicleStudents">Students:</label>
+                            <div class="students-input-section">
+                                <p class="form-help">Add students to this vehicle. You can also manage students later using the "Manage Students" tab.</p>
+                                <div class="student-inputs" id="newVehicleStudentInputs">
+                                    <div class="student-input-group">
+                                        <input type="text" placeholder="Student name" class="student-name-input">
+                                        <select class="student-pathway-input">
+                                            <option value="">Select pathway</option>
+                                            <option value="Preparations">Preparations</option>
+                                            <option value="Horizons">Horizons</option>
+                                            <option value="Explorers">Explorers</option>
+                                            <option value="Futures">Futures</option>
+                                        </select>
+                                        <button type="button" class="btn-remove" onclick="removeNewVehicleStudentInput(this)">×</button>
+                                    </div>
+                                </div>
+                                <div class="student-input-actions">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="addNewVehicleStudentInput()">
+                                        <span class="btn-icon">➕</span>
+                                        Add Another Student
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearNewVehicleStudents()">
+                                        Clear All Students
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="clearNewVehicleForm()">Clear Form</button>
+                            <button type="button" class="btn btn-primary" onclick="createNewVehicle()">Add Vehicle</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Student Management Content -->
+                <div class="main-content" id="students-content">
+                    <!-- Current Students Sub-tab -->
+                    <div class="sub-content active" id="students-current">
+                        <div class="management-header">
+                            <h4>Current Students</h4>
+                            <div class="management-controls">
+                                <input type="text" id="studentSearchInput" placeholder="Search students..." onkeyup="filterStudentList()">
+                                <select id="studentPathwayFilter" onchange="filterStudentList()">
+                                    <option value="">All Pathways</option>
+                                    <option value="Preparations">Preparations</option>
+                                    <option value="Horizons">Horizons</option>
+                                    <option value="Explorers">Explorers</option>
+                                    <option value="Futures">Futures</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="bulk-actions">
+                            <label class="select-all">
+                                <input type="checkbox" id="selectAllStudents" onchange="toggleSelectAllStudents()">
+                                Select All
+                            </label>
+                            <button type="button" class="btn btn-danger btn-sm" id="bulkDeleteStudentsBtn" onclick="bulkDeleteStudents()" disabled>
+                                <span class="btn-icon">🗑️</span>
+                                Delete Selected
+                            </button>
+                        </div>
+                        
+                        <div class="student-list" id="studentManagementList">
+                            <!-- Student list will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- CSV Import Sub-tab -->
+                    <div class="sub-content" id="students-csv">
+                    <div class="form-group">
+                        <label for="csvFile">Upload CSV File:</label>
+                        <input type="file" id="csvFile" accept=".csv" onchange="handleCsvUpload(event)">
+                        <small>CSV should have columns: VehicleType, VehicleNumber, StudentName, Pathway</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" onclick="downloadCsvTemplate()">
+                            <span class="btn-icon">📥</span>
+                            Download Template
+                        </button>
+                    </div>
+                    
+                    <div class="csv-preview" id="csvPreview" style="display: none;">
+                        <h4>Preview:</h4>
+                        <div class="csv-preview-content" id="csvPreviewContent"></div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="clearCsvPreview()">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="importCsvData()">Import Data</button>
+                        </div>
+                    </div>
+                    </div>
+                    
+                    <!-- Bulk Add Sub-tab -->
+                    <div class="sub-content" id="students-bulk">
+                        <h4>Bulk Student Entry</h4>
+                        <div class="form-group">
+                            <label for="bulkStudents">Bulk Student Entry:</label>
+                            <textarea id="bulkStudents" placeholder="Enter students (one per line):&#10;John Smith&#10;Jane Doe&#10;Bob Johnson" rows="8"></textarea>
+                            <small>Enter student names, one per line. You can assign pathways and vehicles later.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="defaultPathway">Default Pathway (optional):</label>
+                            <select id="defaultPathway">
+                                <option value="">No default</option>
+                                <option value="Preparations">Preparations</option>
+                                <option value="Horizons">Horizons</option>
+                                <option value="Explorers">Explorers</option>
+                                <option value="Futures">Futures</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="clearBulkForm()">Clear Form</button>
+                            <button type="button" class="btn btn-primary" onclick="processBulkStudents()">Add Students</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Content -->
+                <div class="main-content" id="settings-content">
+                    <!-- General Settings Sub-tab -->
+                    <div class="sub-content active" id="settings-general">
+                        <div class="management-header">
+                            <h4>General Settings</h4>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <div class="form-group">
+                                <label for="schoolName">School Name:</label>
+                                <input type="text" id="schoolName" placeholder="Enter school name" maxlength="100">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="logoUpload">School Logo:</label>
+                                <div class="logo-upload-section">
+                                    <input type="file" id="logoUpload" accept="image/*" onchange="previewLogo()">
+                                    <div class="logo-preview">
+                                        <img id="logoPreview" src="" alt="Logo Preview" style="display: none; max-width: 200px; max-height: 100px;">
+                                        <div id="logoPlaceholder">No logo uploaded</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="pathwayLabel">Student Grouping Label:</label>
+                                <input type="text" id="pathwayLabel" placeholder="e.g., Pathway, Year, Class, Grade" maxlength="20" value="Pathway">
+                                <small>What do you call your student groupings? (Pathway, Year, Class, etc.)</small>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-primary" onclick="saveGeneralSettings()">Save Settings</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Theme Settings Sub-tab -->
+                    <div class="sub-content" id="settings-theme">
+                        <div class="management-header">
+                            <h4>Theme Settings</h4>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <div class="form-group">
+                                <label>Color Theme:</label>
+                                <div class="theme-options">
+                                    <div class="theme-option" data-theme="blue" onclick="selectTheme('blue')">
+                                        <div class="theme-preview" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);"></div>
+                                        <span>Blue (Default)</span>
+                                    </div>
+                                    <div class="theme-option" data-theme="green" onclick="selectTheme('green')">
+                                        <div class="theme-preview" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"></div>
+                                        <span>Green</span>
+                                    </div>
+                                    <div class="theme-option" data-theme="purple" onclick="selectTheme('purple')">
+                                        <div class="theme-preview" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"></div>
+                                        <span>Purple</span>
+                                    </div>
+                                    <div class="theme-option" data-theme="orange" onclick="selectTheme('orange')">
+                                        <div class="theme-preview" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"></div>
+                                        <span>Orange</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
+                                    <span class="checkmark"></span>
+                                    <span>Enable Dark Mode</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-primary" onclick="saveThemeSettings()">Save Theme</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Security Settings Sub-tab -->
+                    <div class="sub-content" id="settings-security">
+                        <div class="management-header">
+                            <h4>Security Settings</h4>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <div class="form-group">
+                                <label for="adminPin">Admin PIN (4-6 digits):</label>
+                                <input type="password" id="adminPin" placeholder="Enter PIN" maxlength="6" pattern="[0-9]{4,6}">
+                                <small class="form-help">This PIN will be required to access the admin area</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirmAdminPin">Confirm PIN:</label>
+                                <input type="password" id="confirmAdminPin" placeholder="Confirm PIN" maxlength="6" pattern="[0-9]{4,6}">
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-primary" onclick="saveSecuritySettings()">Save PIN</button>
+                                <button type="button" class="btn btn-secondary" onclick="testPinAccess()">Test PIN</button>
+                                <button type="button" class="btn btn-outline" onclick="resetPin()">Reset PIN</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN Entry Modal -->
+    <div class="modal hidden" id="pinModal">
+        <div class="modal-content pin-modal">
+            <div class="modal-header">
+                <h3>Admin Access</h3>
+            </div>
+            <div class="modal-body">
+                <div class="pin-entry-section">
+                    <p>Please enter the admin PIN to access the management area:</p>
+                    <div class="pin-input-container">
+                        <input type="password" id="pinInput" placeholder="Enter PIN" maxlength="6" pattern="[0-9]{4,6}" onkeypress="handlePinKeyPress(event)">
+                        <div id="pinError" class="error-message" style="display: none;">Incorrect PIN. Please try again.</div>
+                        <div class="forgot-pin">
+                            <a href="#" onclick="showForgotPinHelp()" class="forgot-pin-link">Forgot PIN?</a>
+                        </div>
+                    </div>
+                    <div class="pin-actions">
+                        <button type="button" class="btn btn-primary" onclick="verifyPin()">Enter</button>
+                        <button type="button" class="btn btn-secondary" onclick="cancelPin()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Edit Modal -->
+    <div class="modal hidden" id="vehicleEditModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Vehicle</h3>
+                <button class="modal-close" onclick="hideVehicleEditModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="vehicleEditForm">
+                    <div class="form-group">
+                        <label for="editVehicleType">Type:</label>
+                        <select id="editVehicleType" required>
+                            <option value="bus">Bus</option>
+                            <option value="taxi">Taxi</option>
+                            <option value="parent">Parent Drop-off</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editVehicleNumber">Number:</label>
+                        <input type="text" id="editVehicleNumber" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="saveVehicleEdit()">Save Changes</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideVehicleEditModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-new-script.js"></script>
+</body>
+</html>
