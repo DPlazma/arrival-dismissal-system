@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Vehicle Creation Error** - Fixed JavaScript error in `switchSubTab` function when adding new vehicles programmatically
+- **CSV Import Error** - Fixed 'pathwayHeader is not defined' error in CSV import functionality
 - **PWA Navigation** - Fixed navigation issues in installed PWA applications
 - **Theme Backgrounds** - Ensured all UI elements properly theme in dark mode
 - **Timer Emojis** - Removed cluttering timer emojis from bus containers
