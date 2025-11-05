@@ -15,8 +15,8 @@ services:
       timeout: 10s
       retries: 3
     volumes:
-      # Optional: persist data (uncomment if you want to save records between restarts)
-      # - ./data:/app/data
+      # Persist data between container restarts
+      - ./data:/app/data
     networks:
       - arrival-network
 
