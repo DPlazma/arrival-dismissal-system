@@ -3,6 +3,8 @@
 ## Overview
 A responsive web application designed to manage and track student arrivals and dismissals. **Optimized specifically for tablets and TVs** while maintaining full compatibility with phones and desktop computers.
 
+📋 **[View Changelog](CHANGELOG.md)** - See what's new and recent fixes
+
 ## ✨ Key Features
 
 ### 📱 **Multi-Device Responsive Design**
