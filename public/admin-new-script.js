@@ -930,7 +930,11 @@ function switchSubTab(mainTab, subTab) {
     mainContent.querySelectorAll('.sub-content').forEach(content => content.classList.remove('active'));
     
     // Add active class to selected sub-tab and content
-    event.target.classList.add('active');
+    // Handle both programmatic calls (no event) and button clicks (with event)
+    const targetButton = event && event.target ? event.target : document.querySelector(`#${mainTab}-subtabs button[onclick*="${subTab}"]`);
+    if (targetButton) {
+        targetButton.classList.add('active');
+    }
     document.getElementById(`${mainTab}-${subTab}`).classList.add('active');
     
     // Load data for specific tabs
