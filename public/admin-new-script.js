@@ -1101,6 +1101,7 @@ async function importCsvData() {
     }
     
     try {
+        const pathwayHeader = adminSettings.pathwayLabel;
         const vehicleMap = new Map();
         
         // Group students by vehicle
