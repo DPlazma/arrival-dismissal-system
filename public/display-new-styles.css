@@ -322,14 +322,14 @@ body {
 
 .bus-card {
     background: var(--card-background);
-    border: 3px solid var(--border-color);
-    border-radius: 12px;
-    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    min-height: 85px;
+    min-height: 75px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -356,16 +356,16 @@ body {
 }
 
 .bus-number {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--text-color);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .bus-status {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .bus-student-count {
