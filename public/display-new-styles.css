@@ -376,18 +376,18 @@ body {
 /* Taxi Grid Styles */
 .taxi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
 }
 
 .taxi-card {
     background: var(--card-background);
-    border: 3px solid var(--border-color);
-    border-radius: 16px;
-    padding: 1.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.75rem;
     transition: all 0.3s ease;
     position: relative;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .taxi-card:hover {
@@ -414,21 +414,21 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.25rem;
     border-bottom: 1px solid var(--border-color);
 }
 
 .taxi-name {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--text-color);
 }
 
 .taxi-status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
     font-weight: 500;
 }
 
@@ -448,14 +448,14 @@ body {
 }
 
 .taxi-students {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .student-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
+    padding: 0.25rem 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -466,10 +466,11 @@ body {
 .student-name {
     font-weight: 500;
     color: var(--text-color);
+    font-size: 0.85rem;
 }
 
 .student-pathway {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--pathway-color);
 }
 
@@ -496,7 +497,7 @@ body {
 }
 
 .taxi-arrival-time {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--secondary-text-color);
     text-align: center;
 }
@@ -626,8 +627,8 @@ body {
     }
     
     .taxi-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.5rem;
     }
     
     .header-stats {
@@ -664,7 +665,7 @@ body {
     }
     
     .taxi-card {
-        padding: 1rem;
+        padding: 0.5rem;
     }
     
     .section-title {
