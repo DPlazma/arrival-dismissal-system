@@ -84,83 +84,11 @@ function showForgotPinHelp() {
 
 // Settings Management Functions
 async function loadAdminSettings() {
-    try {
-        const response = await fetch('/api/admin-settings');
-        const serverSettings = await response.json();
-
-        // Update adminSettings with server data
-        adminSettings.schoolName = serverSettings.schoolName || '';
-        adminSettings.logoUrl = serverSettings.logoUrl || '';
-        adminSettings.theme = serverSettings.theme || 'blue';
-        adminSettings.darkMode = serverSettings.darkMode || false;
-        adminSettings.pathwayLabel = serverSettings.pathwayLabel || 'Pathway';
-
-        // Keep PIN local for UI purposes (don't load from server for security)
-        adminSettings.adminPin = localStorage.getItem('adminPin') || '';
-
-        // Apply settings to UI
-        document.getElementById('schoolName').value = adminSettings.schoolName;
-        document.getElementById('pathwayLabel').value = adminSettings.pathwayLabel;
-        if (adminSettings.logoUrl) {
-            document.getElementById('logoPreview').src = adminSettings.logoUrl;
-            document.getElementById('logoPreview').style.display = 'block';
-            document.getElementById('logoPlaceholder').style.display = 'none';
-        }
-        
-        // Apply theme
-        applyTheme(adminSettings.theme);
-        
-        // Mark selected theme option
-        document.querySelectorAll('.theme-option').forEach(option => {
-            option.classList.remove('selected');
-        });
-        document.querySelector(`[data-theme="${adminSettings.theme}"]`).classList.add('selected');
-        
-        // Apply dark mode
-        document.getElementById('darkModeToggle').checked = adminSettings.darkMode;
-        if (adminSettings.darkMode) {
-            document.body.classList.add('dark-mode');
-        } else {
-            document.body.classList.remove('dark-mode');
-        }
-        
-        // Listen for system theme changes (only if no stored preference)
-        const storedDarkMode = localStorage.getItem('darkMode');
-        if (storedDarkMode === null && window.matchMedia) {
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            mediaQuery.addEventListener('change', (e) => {
-                // Only auto-switch if user hasn't manually set a preference
-                if (localStorage.getItem('darkMode') === null) {
-                    adminSettings.darkMode = e.matches;
-                    if (e.matches) {
-                        document.body.classList.add('dark-mode');
-                    } else {
-                        document.body.classList.remove('dark-mode');
-                    }
-                    document.getElementById('darkModeToggle').checked = e.matches;
-                }
-            });
-        }
-        
-        // Update PIN field
-        document.getElementById('adminPin').value = adminSettings.adminPin;
-        document.getElementById('confirmAdminPin').value = adminSettings.adminPin;
-        
-        // Update pathway labels throughout the UI
-        updatePathwayLabels();
-    } catch (error) {
-        console.error('Error loading admin settings:', error);
-        // Fallback to localStorage if server request fails
-        loadAdminSettingsFallback();
-    }
-}
-
-// Fallback function to load settings from localStorage if server fails
-function loadAdminSettingsFallback() {
+    // Load settings from localStorage (for UI preferences)
     adminSettings.schoolName = localStorage.getItem('schoolName') || '';
     adminSettings.logoUrl = localStorage.getItem('logoUrl') || '';
     adminSettings.theme = localStorage.getItem('theme') || 'blue';
-    
+
     // Check for stored dark mode preference, otherwise use system preference
     const storedDarkMode = localStorage.getItem('darkMode');
     if (storedDarkMode !== null) {
@@ -169,22 +97,38 @@ function loadAdminSettingsFallback() {
         // Use system preference if no stored preference
         adminSettings.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    
-    adminSettings.adminPin = localStorage.getItem('adminPin') || '';
+
     adminSettings.pathwayLabel = localStorage.getItem('pathwayLabel') || 'Pathway';
-    
+
+    // Load PIN from server
+    try {
+        const response = await fetch('/api/admin-settings');
+        if (response.ok) {
+            const serverSettings = await response.json();
+            adminSettings.adminPin = serverSettings.pin;
+        } else {
+            console.warn('Could not load admin settings from server');
+            adminSettings.adminPin = '';
+        }
+    } catch (error) {
+        console.error('Error loading admin settings:', error);
+        adminSettings.adminPin = '';
+    }
+
     // Apply settings to UI
     document.getElementById('schoolName').value = adminSettings.schoolName;
     document.getElementById('pathwayLabel').value = adminSettings.pathwayLabel;
+    document.getElementById('adminPin').value = adminSettings.adminPin;
+    document.getElementById('confirmAdminPin').value = adminSettings.adminPin;
     if (adminSettings.logoUrl) {
         document.getElementById('logoPreview').src = adminSettings.logoUrl;
         document.getElementById('logoPreview').style.display = 'block';
         document.getElementById('logoPlaceholder').style.display = 'none';
     }
-    
+
     // Apply theme
     applyTheme(adminSettings.theme);
-    
+
     // Mark selected theme option
     document.querySelectorAll('.theme-option').forEach(option => {
         option.classList.remove('selected');
@@ -272,34 +216,16 @@ async function saveGeneralSettings() {
     
     adminSettings.schoolName = schoolName;
     adminSettings.pathwayLabel = pathwayLabel;
+    localStorage.setItem('schoolName', schoolName);
+    localStorage.setItem('pathwayLabel', pathwayLabel);
     
-    try {
-        const response = await fetch('/api/admin-settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                schoolName: schoolName,
-                pathwayLabel: pathwayLabel
-            })
-        });
-        
-        if (response.ok) {
-            // Update school name in headers
-            updateSchoolNameDisplay();
-            
-            // Update pathway labels throughout the UI
-            updatePathwayLabels();
-            
-            alert('General settings saved successfully!');
-        } else {
-            throw new Error('Failed to save settings');
-        }
-    } catch (error) {
-        console.error('Error saving general settings:', error);
-        alert('Failed to save settings. Please try again.');
-    }
+    // Update school name in headers
+    updateSchoolNameDisplay();
+    
+    // Update pathway labels throughout the UI
+    updatePathwayLabels();
+    
+    alert('General settings saved successfully!');
 }
 
 function updateSchoolNameDisplay() {
@@ -379,28 +305,10 @@ function previewLogo() {
     }
 }
 
-async function saveThemeSettings() {
-    try {
-        const response = await fetch('/api/admin-settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                theme: adminSettings.theme,
-                darkMode: adminSettings.darkMode
-            })
-        });
-        
-        if (response.ok) {
-            alert('Theme settings saved successfully!');
-        } else {
-            throw new Error('Failed to save theme settings');
-        }
-    } catch (error) {
-        console.error('Error saving theme settings:', error);
-        alert('Failed to save theme settings. Please try again.');
-    }
+function saveThemeSettings() {
+    localStorage.setItem('theme', adminSettings.theme);
+    localStorage.setItem('darkMode', adminSettings.darkMode);
+    alert('Theme settings saved successfully!');
 }
 
 function selectTheme(theme) {
@@ -468,89 +376,83 @@ function toggleDarkMode() {
 async function saveSecuritySettings() {
     const pin = document.getElementById('adminPin').value;
     const confirmPin = document.getElementById('confirmAdminPin').value;
-    
+
     if (pin !== confirmPin) {
         alert('PINs do not match. Please try again.');
         return;
     }
-    
+
     if (pin && pin.length < 4) {
         alert('PIN must be at least 4 digits.');
         return;
     }
-    
-    adminSettings.adminPin = pin;
-    
+
     try {
         const response = await fetch('/api/admin-settings', {
-            method: 'POST',
+            method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                pin: pin
-            })
+            body: JSON.stringify({ pin: pin })
         });
-        
+
         if (response.ok) {
+            adminSettings.adminPin = pin;
             alert('Security settings saved successfully!');
         } else {
-            throw new Error('Failed to save security settings');
+            const error = await response.json();
+            alert('Error saving security settings: ' + (error.error || 'Unknown error'));
         }
     } catch (error) {
         console.error('Error saving security settings:', error);
-        alert('Failed to save security settings. Please try again.');
+        alert('Network error. Please try again.');
     }
 }
 
 async function testPinAccess() {
     try {
         const response = await fetch('/api/admin-settings');
-        const settings = await response.json();
-        
-        if (settings.pin) {
-            showPinModal();
+        if (response.ok) {
+            const settings = await response.json();
+            if (settings.pin) {
+                // Redirect to PIN page to test access
+                window.location.href = '/admin-pin.html';
+            } else {
+                alert('No PIN is currently set.');
+            }
         } else {
-            alert('No PIN is currently set.');
+            alert('Could not check PIN settings.');
         }
     } catch (error) {
-        console.error('Error checking PIN status:', error);
-        alert('Failed to check PIN status. Please try again.');
+        console.error('Error checking PIN settings:', error);
+        alert('Network error. Please try again.');
     }
 }
 
-async function resetPin() {
-    if (confirm("Are you sure you want to reset the PIN? This will remove PIN protection and allow anyone to access the admin area.")) {
+async function logout() {
+    if (confirm('Are you sure you want to logout?')) {
         try {
-            const response = await fetch('/api/admin-settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    pin: ''
-                })
+            const response = await fetch('/api/logout', {
+                method: 'POST'
             });
-            
+
             if (response.ok) {
-                adminSettings.adminPin = '';
-                document.getElementById('adminPin').value = '';
-                document.getElementById('confirmAdminPin').value = '';
-                alert("PIN has been reset. The admin area is now accessible without a PIN.");
+                // Redirect to display page
+                window.location.href = '/';
             } else {
-                throw new Error('Failed to reset PIN');
+                alert('Error logging out. Please try again.');
             }
         } catch (error) {
-            console.error('Error resetting PIN:', error);
-            alert('Failed to reset PIN. Please try again.');
+            console.error('Error logging out:', error);
+            alert('Network error. Please try again.');
         }
     }
 }
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', async function() {
-    // Load admin settings first
-    await loadAdminSettings();
+document.addEventListener('DOMContentLoaded', function() {
+    // Load and apply theme settings
+    loadAdminThemeSettings();
     
     // Update time display
     updateCurrentTime();
@@ -980,25 +882,16 @@ function handleSortChange() {
 
 // Student Management Modal Functions
 function showStudentManagementModal() {
-    // Check if PIN protection is enabled
-    const storedPin = localStorage.getItem('adminPin');
-    if (storedPin && storedPin.length >= 4) {
-        showPinModal();
-        // Set up a callback to show the management modal after PIN verification
-        window.pinVerifiedCallback = function() {
-            showManagementModal();
-        };
-    } else {
-        showManagementModal();
-    }
+    // No PIN check needed - user is already authenticated for admin access
+    showManagementModal();
 }
 
-async function showManagementModal() {
+function showManagementModal() {
     document.getElementById('studentManagementModal').classList.remove('hidden');
     switchMainTab('vehicles'); // Default to vehicle management
     
     // Load admin settings
-    await loadAdminSettings();
+    loadAdminSettings();
 }
 
 function hideStudentManagementModal() {
