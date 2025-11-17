@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Access - PIN Required</title>
+    <meta name="description" content="Enter PIN to access admin panel">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .pin-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .logo-section {
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+
+        .pin-input-container {
+            margin-bottom: 30px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 24px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f7fafc;
+            color: #2d3748;
+            font-weight: 600;
+            letter-spacing: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .pin-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .pin-input::placeholder {
+            color: #a0aec0;
+            letter-spacing: normal;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            font-size: 14px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #718096;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #667eea;
+        }
+
+        @media (max-width: 480px) {
+            .pin-container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="pin-container">
+        <div class="logo-section">
+            <div class="logo">⚙️</div>
+            <h1>Admin Access</h1>
+            <div class="subtitle">Enter PIN to access admin panel</div>
+        </div>
+
+        <form id="pinForm">
+            <div class="pin-input-container">
+                <input
+                    type="password"
+                    id="pinInput"
+                    class="pin-input"
+                    placeholder="Enter PIN"
+                    maxlength="10"
+                    autocomplete="off"
+                    required
+                >
+                <div id="errorMessage" class="error-message">Incorrect PIN. Please try again.</div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                Access Admin Panel
+            </button>
+        </form>
+
+        <a href="/" class="back-link">← Back to Display</a>
+    </div>
+
+    <script>
+        document.getElementById('pinForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const pinInput = document.getElementById('pinInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const errorMessage = document.getElementById('errorMessage');
+
+            const enteredPin = pinInput.value.trim();
+
+            if (!enteredPin) {
+                errorMessage.textContent = 'Please enter a PIN';
+                errorMessage.style.display = 'block';
+                pinInput.focus();
+                return;
+            }
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Verifying...';
+
+            try {
+                const response = await fetch('/api/verify-pin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pin: enteredPin })
+                });
+
+                if (response.ok) {
+                    // PIN verified, redirect to admin
+                    window.location.href = '/admin';
+                } else {
+                    // PIN incorrect
+                    errorMessage.style.display = 'block';
+                    pinInput.value = '';
+                    pinInput.focus();
+                }
+            } catch (error) {
+                console.error('Error verifying PIN:', error);
+                errorMessage.textContent = 'Network error. Please try again.';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Access Admin Panel';
+            }
+        });
+
+        // Auto-focus PIN input
+        document.getElementById('pinInput').focus();
+
+        // Handle Enter key
+        document.getElementById('pinInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('pinForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

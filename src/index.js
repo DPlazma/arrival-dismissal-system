@@ -3,11 +3,23 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
+const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON requests
 app.use(express.json());
+
+// Session middleware for PIN verification
+app.use(session({
+    secret: 'arrival-dismissal-admin-session',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
@@ -21,7 +33,7 @@ app.use((req, res, next) => {
 });
 
 // Data persistence
-const DATA_FILE = path.join(__dirname, 'data', 'vehicles-data.json');
+const DATA_FILE = path.join(__dirname, '..', 'data', 'vehicles-data.json');
 
 // Save vehicles data to file
 async function saveVehiclesData() {
@@ -185,14 +197,63 @@ let vehicles = [
     }
 ];
 
-// Route to serve the admin page
+// Admin settings data persistence
+const ADMIN_SETTINGS_FILE = path.join(__dirname, '..', 'data', 'admin-settings.json');
+
+// Default admin settings
+let adminSettings = {
+    pin: '',
+    schoolName: '',
+    logoUrl: '',
+    theme: 'blue',
+    darkMode: false,
+    pathwayLabel: 'Pathway'
+};
+
+// Save admin settings to file
+async function saveAdminSettings() {
+    try {
+        // Ensure data directory exists
+        const dataDir = path.dirname(ADMIN_SETTINGS_FILE);
+        await fs.mkdir(dataDir, { recursive: true });
+
+        await fs.writeFile(ADMIN_SETTINGS_FILE, JSON.stringify(adminSettings, null, 2));
+        console.log('Admin settings saved successfully');
+    } catch (error) {
+        console.error('Error saving admin settings:', error);
+    }
+}
+
+// Load admin settings from file
+async function loadAdminSettings() {
+    try {
+        const data = await fs.readFile(ADMIN_SETTINGS_FILE, 'utf8');
+        adminSettings = { ...adminSettings, ...JSON.parse(data) };
+        console.log('Admin settings loaded successfully');
+        return adminSettings;
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            console.log('No admin settings file found, using defaults');
+            return adminSettings;
+        } else {
+            console.error('Error loading admin settings:', error);
+            return adminSettings;
+        }
+    }
+}
+
+// Route to serve the display page (main interface for staff)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/admin-new.html'));
+    res.sendFile(path.join(__dirname, '../public/display-new.html'));
 });
 
-// Route to serve the admin page explicitly
+// Route to serve the admin page (requires PIN verification)
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/admin-new.html'));
+    if (req.session.adminAuthenticated) {
+        res.sendFile(path.join(__dirname, '../public/admin-new.html'));
+    } else {
+        res.sendFile(path.join(__dirname, '../public/admin-pin.html'));
+    }
 });
 
 // Route to serve the display page for staff
@@ -783,10 +844,100 @@ app.post('/api/reset/day', (req, res) => {
     });
 });
 
+// PIN verification endpoint
+app.post('/api/verify-pin', async (req, res) => {
+    try {
+        const { pin } = req.body;
+
+        if (!pin || typeof pin !== 'string') {
+            return res.status(400).json({ success: false, message: 'PIN is required' });
+        }
+
+        // Load admin settings
+        const settings = await loadAdminSettings();
+
+        // Check if PIN matches
+        if (settings.pin && settings.pin === pin) {
+            req.session.adminAuthenticated = true;
+            res.json({ success: true, message: 'PIN verified successfully' });
+        } else {
+            res.status(401).json({ success: false, message: 'Invalid PIN' });
+        }
+    } catch (error) {
+        console.error('Error verifying PIN:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// Check admin authentication status
+app.get('/api/admin-status', (req, res) => {
+    res.json({ authenticated: req.session.adminAuthenticated || false });
+});
+
+// Logout admin
+app.post('/api/admin-logout', (req, res) => {
+    req.session.adminAuthenticated = false;
+    res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// Admin settings endpoints
+app.get('/api/admin-settings', async (req, res) => {
+    try {
+        const settings = await loadAdminSettings();
+        // Don't send PIN in response for security
+        const { pin, ...safeSettings } = settings;
+        res.json(safeSettings);
+    } catch (error) {
+        console.error('Error loading admin settings:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+app.post('/api/admin-settings', async (req, res) => {
+    try {
+        const updates = req.body;
+
+        // Load current settings
+        const currentSettings = await loadAdminSettings();
+
+        // Update settings (only allow specific fields)
+        if (updates.pin !== undefined) {
+            currentSettings.pin = updates.pin;
+        }
+        if (updates.schoolName !== undefined) {
+            currentSettings.schoolName = updates.schoolName;
+        }
+        if (updates.logoUrl !== undefined) {
+            currentSettings.logoUrl = updates.logoUrl;
+        }
+        if (updates.theme !== undefined) {
+            currentSettings.theme = updates.theme;
+        }
+        if (updates.darkMode !== undefined) {
+            currentSettings.darkMode = updates.darkMode;
+        }
+        if (updates.pathwayLabel !== undefined) {
+            currentSettings.pathwayLabel = updates.pathwayLabel;
+        }
+
+        // Save updated settings
+        adminSettings = currentSettings;
+        await saveAdminSettings();
+
+        res.json({ success: true, message: 'Settings updated successfully' });
+    } catch (error) {
+        console.error('Error updating admin settings:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // Start the server
 async function startServer() {
     // Try to load saved data first
     const dataLoaded = await loadVehiclesData();
+    
+    // Load admin settings
+    await loadAdminSettings();
     
     if (!dataLoaded) {
         // If no saved data, run migration on default data
