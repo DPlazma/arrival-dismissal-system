@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-11-05
 
 ### Added
+- **Display Page Dark Mode Toggle** - Added dark mode toggle directly to the display interface side menu
 - **Complete Arrival & Dismissal System** - Full-featured vehicle and student management application
 - **Progressive Web App (PWA)** - Installable on mobile devices and tablets with offline capabilities
 - **Docker Deployment** - Containerized application with volume persistence for data
