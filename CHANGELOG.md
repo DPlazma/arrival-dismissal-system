@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Display Page Dark Mode Toggle** - Added dark mode toggle directly to the display interface side menu
-- **Taxi Grid Optimization** - Significantly improved space utilization to show more taxis on screen
+- **Grid Space Optimization** - Significantly improved space utilization across all grids (admin bus/taxi grids, display bus/taxi grids)
 - **Complete Arrival & Dismissal System** - Full-featured vehicle and student management application
 - **Progressive Web App (PWA)** - Installable on mobile devices and tablets with offline capabilities
 - **Docker Deployment** - Containerized application with volume persistence for data
