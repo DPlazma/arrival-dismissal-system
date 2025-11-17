@@ -21,11 +21,15 @@ app.use((req, res, next) => {
 });
 
 // Data persistence
-const DATA_FILE = path.join(__dirname, 'vehicles-data.json');
+const DATA_FILE = path.join(__dirname, 'data', 'vehicles-data.json');
 
 // Save vehicles data to file
 async function saveVehiclesData() {
     try {
+        // Ensure data directory exists
+        const dataDir = path.dirname(DATA_FILE);
+        await fs.mkdir(dataDir, { recursive: true });
+
         await fs.writeFile(DATA_FILE, JSON.stringify(vehicles, null, 2));
         console.log('Vehicles data saved successfully');
     } catch (error) {
