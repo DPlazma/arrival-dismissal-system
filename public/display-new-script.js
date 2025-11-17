@@ -58,6 +58,12 @@ function loadDisplayTheme() {
         document.body.classList.remove('dark-mode');
     }
     
+    // Set dark mode toggle state
+    const darkModeToggle = document.getElementById('displayDarkModeToggle');
+    if (darkModeToggle) {
+        darkModeToggle.checked = darkMode;
+    }
+    
     // Listen for system theme changes (only if no stored preference)
     if (storedDarkMode === null && window.matchMedia) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -69,12 +75,48 @@ function loadDisplayTheme() {
                 } else {
                     document.body.classList.remove('dark-mode');
                 }
+                // Update toggle state
+                const toggle = document.getElementById('displayDarkModeToggle');
+                if (toggle) toggle.checked = e.matches;
             }
         });
     }
     
     // Update pathway labels
     updateDisplayPathwayLabels();
+    
+    // Set up dark mode toggle
+    setupDarkModeToggle();
+}
+
+function setupDarkModeToggle() {
+    const darkModeToggle = document.getElementById('displayDarkModeToggle');
+    if (!darkModeToggle) return;
+    
+    // Set initial state based on current dark mode
+    const storedDarkMode = localStorage.getItem('darkMode');
+    let darkMode;
+    if (storedDarkMode !== null) {
+        darkMode = storedDarkMode === 'true';
+    } else {
+        darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    darkModeToggle.checked = darkMode;
+    
+    // Add event listener for toggle changes
+    darkModeToggle.addEventListener('change', function() {
+        const isDark = this.checked;
+        
+        // Save preference to localStorage
+        localStorage.setItem('darkMode', isDark.toString());
+        
+        // Apply dark mode
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    });
 }
 
 function applyDisplayTheme(theme) {
