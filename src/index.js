@@ -857,7 +857,8 @@ app.post('/api/verify-pin', async (req, res) => {
         const settings = await loadAdminSettings();
 
         // Check if PIN matches
-        if (settings.pin && settings.pin === pin) {
+        // If no PIN is set (empty string), allow any PIN for initial access
+        if (!settings.pin || settings.pin === pin) {
             req.session.adminAuthenticated = true;
             res.json({ success: true, message: 'PIN verified successfully' });
         } else {
