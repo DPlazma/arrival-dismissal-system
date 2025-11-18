@@ -626,16 +626,20 @@ function toggleVehicleSelection(vehicleId) {
         selectedVehicles.delete(vehicleId);
         selectedStudents.delete(vehicleId);
     } else {
-        // Selecting vehicle - also select all students in this vehicle
+        // Selecting vehicle
         selectedVehicles.add(vehicleId);
-        if (!selectedStudents.has(vehicleId)) {
-            selectedStudents.set(vehicleId, new Set());
+        
+        // Only select individual students for vehicles that support it (not buses)
+        if (vehicle.type !== 'bus') {
+            if (!selectedStudents.has(vehicleId)) {
+                selectedStudents.set(vehicleId, new Set());
+            }
+            const studentSet = selectedStudents.get(vehicleId);
+            // Select all students in the vehicle
+            vehicle.students.forEach((_, index) => {
+                studentSet.add(index);
+            });
         }
-        const studentSet = selectedStudents.get(vehicleId);
-        // Select all students in the vehicle
-        vehicle.students.forEach((_, index) => {
-            studentSet.add(index);
-        });
     }
     updateSelectionSummary();
     displayVehicles(); // Refresh display to show selection state

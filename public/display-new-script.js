@@ -199,7 +199,7 @@ async function loadAllVehicles() {
             
             // Separate buses and taxis
             buses = allVehicles.filter(vehicle => vehicle.type === 'bus');
-            taxis = allVehicles.filter(vehicle => vehicle.type === 'taxi' || vehicle.type === 'parent');
+            taxis = allVehicles.filter(vehicle => vehicle.type === 'taxi' || vehicle.type === 'parent' || vehicle.type === 'adhoc');
             
             // Display vehicles
             displayBuses();
