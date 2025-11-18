@@ -307,8 +307,8 @@ app.post('/api/vehicles/:id/toggle', async (req, res) => {
         return res.status(404).json({ error: 'Vehicle not found' });
     }
     
-    if (vehicle.type === 'bus') {
-        // Cycle through states for buses: not-arrived -> arrived -> absent -> not-arrived
+    if (vehicle.type === 'bus' || vehicle.type === 'adhoc') {
+        // Cycle through states for buses and ad-hoc vehicles: not-arrived -> arrived -> absent -> not-arrived
         if (vehicle.status === 'not-arrived') {
             vehicle.status = 'arrived';
             vehicle.arrivalTime = new Date().toISOString();
@@ -322,13 +322,14 @@ app.post('/api/vehicles/:id/toggle', async (req, res) => {
         
         vehicle.lastModified = new Date().toISOString();
         
-        console.log(`Bus ${vehicle.number} status changed to: ${vehicle.status} at ${new Date().toLocaleString()}`);
+        const displayName = vehicle.type === 'adhoc' ? vehicle.description : `Bus ${vehicle.number}`;
+        console.log(`${vehicle.type} ${vehicle.type === 'adhoc' ? vehicle.description : vehicle.number} status changed to: ${vehicle.status} at ${new Date().toLocaleString()}`);
         
-        // Save data after toggling bus
+        // Save data after toggling
         await saveVehiclesData();
         
         res.json({ 
-            message: `Bus ${vehicle.number} marked as ${vehicle.status.replace('-', ' ')}`,
+            message: `${displayName} marked as ${vehicle.status.replace('-', ' ')}`,
             vehicle: vehicle
         });
     } else {
@@ -409,8 +410,8 @@ app.post('/api/vehicles/batch-toggle', async (req, res) => {
             continue;
         }
         
-        if (vehicle.type === 'bus') {
-            // Cycle through states for buses: not-arrived -> arrived -> absent -> not-arrived
+        if (vehicle.type === 'bus' || vehicle.type === 'adhoc') {
+            // Cycle through states for buses and ad-hoc vehicles: not-arrived -> arrived -> absent -> not-arrived
             if (vehicle.status === 'not-arrived') {
                 vehicle.status = 'arrived';
                 vehicle.arrivalTime = new Date().toISOString();

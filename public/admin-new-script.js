@@ -507,11 +507,11 @@ function displayTaxis() {
         return;
     }
     
-    // Sort taxis numerically by number only (ignore status changes)
+    // Sort taxis: ad-hoc first, then numerically by number
     const sortedTaxis = [...taxis].sort((a, b) => {
-        // Ad-hoc vehicles go to the end
-        if (a.type === 'adhoc' && b.type !== 'adhoc') return 1;
-        if (b.type === 'adhoc' && a.type !== 'adhoc') return -1;
+        // Ad-hoc vehicles go to the top
+        if (a.type === 'adhoc' && b.type !== 'adhoc') return -1;
+        if (b.type === 'adhoc' && a.type !== 'adhoc') return 1;
         
         // For regular vehicles, sort by number
         if (a.type !== 'adhoc' && b.type !== 'adhoc') {
