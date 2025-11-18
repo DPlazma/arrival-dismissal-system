@@ -160,10 +160,18 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    align-items: end;
+    align-items: flex-start;
     position: sticky;
     top: 0;
     z-index: 100;
+}
+
+.selection-panel {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    order: -1; /* Put selection panel first (left side) */
+    margin-right: auto;
 }
 
 .control-group {
@@ -462,6 +470,13 @@ body {
 .bus-student-count {
     font-weight: 600;
     color: var(--text-color);
+}
+
+.bus-students {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 /* Taxi Admin Grid */

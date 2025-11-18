@@ -482,9 +482,22 @@ function displayBuses() {
                 <div class="bus-student-list">
                     <div class="bus-student-count">${studentCount} student${studentCount !== 1 ? 's' : ''}</div>
                     ${bus.students.length > 0 ? `
-                        <div style="margin-top: 0.5rem; font-size: 0.7rem;">
-                            ${bus.students.slice(0, 3).map(s => s.name).join(', ')}
-                            ${bus.students.length > 3 ? `<br>+${bus.students.length - 3} more` : ''}
+                        <div class="bus-students">
+                            ${bus.students.map((student, index) => {
+                                const studentKey = `${bus.id}-${index}`;
+                                const isStudentSelected = selectedStudents.has(bus.id) && selectedStudents.get(bus.id).has(index);
+                                return `
+                                <div class="student-item ${student.status || 'not-arrived'} ${isStudentSelected ? 'selected' : ''}" 
+                                     onclick="toggleStudentSelection(${bus.id}, ${index})">
+                                    <div class="student-info">
+                                        <div class="student-name">${escapeHtml(student.name)}</div>
+                                        <div class="student-pathway">${escapeHtml(student.pathway)}</div>
+                                    </div>
+                                    <div class="student-status-indicator ${student.status || 'not-arrived'}">
+                                        ${getStatusText(student.status || 'not-arrived')}
+                                    </div>
+                                </div>
+                            `}).join('')}
                         </div>
                     ` : ''}
                 </div>

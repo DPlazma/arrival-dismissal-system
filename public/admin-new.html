@@ -69,6 +69,23 @@
 
     <!-- Controls -->
     <div class="controls">
+        <!-- Selection Panel -->
+        <div class="selection-panel" id="selectionPanel">
+            <div class="selection-summary" id="selectionSummary">
+                <div class="selection-count">No vehicles selected</div>
+            </div>
+            <div class="selection-actions">
+                <button class="btn btn-success" id="confirmChangesBtn" onclick="confirmSelectedChanges()" disabled>
+                    <span class="btn-icon">✓</span>
+                    Confirm Changes
+                </button>
+                <button class="btn btn-secondary" onclick="clearSelection()">
+                    <span class="btn-icon">✕</span>
+                    Clear
+                </button>
+            </div>
+        </div>
+        
         <div class="control-group">
             <label for="sortBy">Sort By:</label>
             <select id="sortBy" class="filter-select">
@@ -116,23 +133,6 @@
             <button class="btn btn-warning" onclick="resetAllVehicles()">
                 <span class="btn-icon">🔄</span>
                 Reset All
-            </button>
-        </div>
-    </div>
-
-    <!-- Selection Panel -->
-    <div class="selection-panel" id="selectionPanel">
-        <div class="selection-summary" id="selectionSummary">
-            <div class="selection-count">No vehicles selected</div>
-        </div>
-        <div class="selection-actions">
-            <button class="btn btn-success" id="confirmChangesBtn" onclick="confirmSelectedChanges()" disabled>
-                <span class="btn-icon">✓</span>
-                Confirm Changes
-            </button>
-            <button class="btn btn-secondary" onclick="clearSelection()">
-                <span class="btn-icon">✕</span>
-                Clear
             </button>
         </div>
     </div>
