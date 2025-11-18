@@ -622,10 +622,24 @@ async function toggleStudentStatus(vehicleId, studentIndex) {
 
 // Toggle vehicle selection for batch operations
 function toggleVehicleSelection(vehicleId) {
+    const vehicle = allVehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return;
+
     if (selectedVehicles.has(vehicleId)) {
+        // Deselecting vehicle - also deselect all students in this vehicle
         selectedVehicles.delete(vehicleId);
+        selectedStudents.delete(vehicleId);
     } else {
+        // Selecting vehicle - also select all students in this vehicle
         selectedVehicles.add(vehicleId);
+        if (!selectedStudents.has(vehicleId)) {
+            selectedStudents.set(vehicleId, new Set());
+        }
+        const studentSet = selectedStudents.get(vehicleId);
+        // Select all students in the vehicle
+        vehicle.students.forEach((_, index) => {
+            studentSet.add(index);
+        });
     }
     updateSelectionSummary();
     displayVehicles(); // Refresh display to show selection state
