@@ -10,8 +10,12 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --only=production
 
-# Copy the rest of the application code
+# Copy the rest of the application code, excluding data directory
 COPY . .
+RUN rm -rf /app/data
+
+# Create data directory and set permissions
+RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data
 
 # Create a non-root user to run the application
 RUN addgroup -g 1001 -S nodejs

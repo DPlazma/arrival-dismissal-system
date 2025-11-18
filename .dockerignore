@@ -74,3 +74,6 @@ README.md
 
 # Development files
 start.bat
+
+# Data directory (should be mounted as volume)
+data/
