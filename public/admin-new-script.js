@@ -477,9 +477,6 @@ function displayBuses() {
         
         return `
             <div class="bus-admin-card ${bus.status} ${isSelected ? 'selected' : ''}" data-vehicle-id="${bus.id}" onclick="toggleVehicleSelection(${bus.id})">
-                <div class="vehicle-selection">
-                    <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${bus.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${bus.id}); event.stopPropagation()">
-                </div>
                 <div class="bus-number">Bus ${escapeHtml(bus.number)}</div>
                 <div class="bus-status ${bus.status}">${statusText}</div>
                 <div class="bus-student-list">
@@ -540,9 +537,6 @@ function displayTaxis() {
         return `
             <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
                 <div class="taxi-header">
-                    <div class="vehicle-selection">
-                        <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${taxi.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${taxi.id}); event.stopPropagation()">
-                    </div>
                     <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
                     <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
                 </div>
@@ -554,9 +548,6 @@ function displayTaxis() {
                         return `
                         <div class="student-item ${student.status || 'not-arrived'} ${isStudentSelected ? 'selected' : ''}" 
                              onclick="toggleStudentSelection(${taxi.id}, ${index})">
-                            <div class="student-selection">
-                                <input type="checkbox" class="student-checkbox" data-vehicle-id="${taxi.id}" data-student-index="${index}" ${isStudentSelected ? 'checked' : ''} onchange="toggleStudentSelection(${taxi.id}, ${index}); event.stopPropagation()">
-                            </div>
                             <div class="student-info">
                                 <div class="student-name">${escapeHtml(student.name)}</div>
                                 <div class="student-pathway">${escapeHtml(student.pathway)}</div>
