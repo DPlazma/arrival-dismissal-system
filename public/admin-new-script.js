@@ -986,7 +986,7 @@ async function refreshData() {
 
 // Open display view in same window
 function openDisplayView() {
-    window.location.href = '/display-new';
+    window.location.href = '/display';
 }
 
 // Show toast message
