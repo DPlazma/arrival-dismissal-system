@@ -657,6 +657,8 @@ function updateSelectionSummary() {
         studentCount += studentSet.size;
     }
     
+    console.log('updateSelectionSummary:', { vehicleCount, studentCount, selectedVehicles: Array.from(selectedVehicles), selectedStudents: Array.from(selectedStudents.entries()) });
+    
     const totalSelections = vehicleCount + studentCount;
     const summaryElement = document.getElementById('selectionSummary');
     const confirmBtn = document.getElementById('confirmChangesBtn');
