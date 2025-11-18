@@ -472,13 +472,6 @@ body {
     color: var(--text-color);
 }
 
-.bus-students {
-    margin-top: 0.75rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
 /* Taxi Admin Grid */
 .taxi-admin-grid {
     display: grid;
