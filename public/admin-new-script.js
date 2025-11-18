@@ -407,11 +407,6 @@ document.addEventListener('DOMContentLoaded', function() {
             addAdhocVehicle();
         }
     });
-    
-    // Set up form submission
-    const addVehicleForm = document.getElementById('addVehicleForm');
-    addVehicleForm.addEventListener('submit', handleAddVehicle);
-    
     // Auto-refresh every 30 seconds
     setInterval(loadAllVehicles, 30000);
 });
@@ -623,13 +618,10 @@ async function toggleStudentStatus(vehicleId, studentIndex) {
 
 // Toggle vehicle selection for batch operations
 function toggleVehicleSelection(vehicleId) {
-    console.log('toggleVehicleSelection called with:', vehicleId);
     if (selectedVehicles.has(vehicleId)) {
         selectedVehicles.delete(vehicleId);
-        console.log('Removed vehicle from selection');
     } else {
         selectedVehicles.add(vehicleId);
-        console.log('Added vehicle to selection');
     }
     updateSelectionSummary();
     displayVehicles(); // Refresh display to show selection state
@@ -698,7 +690,7 @@ function updateSelectionSummary() {
             summaryText += `${parentCount} parent drop-off${parentCount !== 1 ? 's' : ''}`;
         }
         
-        summaryElement.innerHTML = `<div class="selection-count">${count} vehicle${count !== 1 ? 's' : ''} selected</div>
+        summaryElement.innerHTML = `<div class="selection-count">${vehicleCount} vehicle${vehicleCount !== 1 ? 's' : ''} selected</div>
                                    <div style="font-size: 0.9rem; color: var(--secondary-text-color); margin-top: 0.5rem;">${summaryText}</div>`;
         confirmBtn.disabled = false;
     }
