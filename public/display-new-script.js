@@ -287,8 +287,8 @@ function displayTaxis() {
     
     taxiGrid.innerHTML = sortedTaxis.map(taxi => {
         const statusBadge = getStatusBadge(taxi.status);
-        const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : '🚕';
-        const vehicleName = taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number}`;
+        const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : taxi.type === 'adhoc' ? '📝' : '🚕';
+        const vehicleName = taxi.type === 'parent' ? 'Parent Drop-off' : taxi.type === 'adhoc' ? taxi.description : `Taxi ${taxi.number}`;
         
         return `
             <div class="taxi-card ${taxi.status}" data-vehicle-id="${taxi.id}">
