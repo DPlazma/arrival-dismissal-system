@@ -469,9 +469,11 @@ function displayBuses() {
         const statusText = getStatusText(bus.status);
         const studentCount = bus.students.length;
         const isSelected = selectedVehicles.has(bus.id);
+        const hasSelectedStudents = selectedStudents.has(bus.id) && selectedStudents.get(bus.id).size > 0;
+        const isVisuallySelected = isSelected || hasSelectedStudents;
         
         return `
-            <div class="bus-admin-card ${bus.status} ${isSelected ? 'selected' : ''}" data-vehicle-id="${bus.id}" onclick="toggleVehicleSelection(${bus.id})">
+            <div class="bus-admin-card ${bus.status} ${isVisuallySelected ? 'selected' : ''}" data-vehicle-id="${bus.id}" onclick="toggleVehicleSelection(${bus.id})">
                 <div class="bus-number">Bus ${escapeHtml(bus.number)}</div>
                 <div class="bus-status ${bus.status}">${statusText}</div>
                 <div class="bus-student-list">
@@ -527,10 +529,12 @@ function displayTaxis() {
         const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : taxi.type === 'adhoc' ? '📝' : '🚕';
         const vehicleName = taxi.type === 'adhoc' ? taxi.description : (taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number}`);
         const isSelected = selectedVehicles.has(taxi.id);
+        const hasSelectedStudents = selectedStudents.has(taxi.id) && selectedStudents.get(taxi.id).size > 0;
+        const isVisuallySelected = isSelected || hasSelectedStudents;
         const isAdhoc = taxi.type === 'adhoc';
         
         return `
-            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
+            <div class="taxi-admin-card ${taxi.status} ${isVisuallySelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
                 <div class="taxi-header">
                     <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
                     <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
@@ -649,15 +653,19 @@ function toggleStudentSelection(vehicleId, studentIndex) {
 
 // Update the selection summary panel
 function updateSelectionSummary() {
-    const vehicleCount = selectedVehicles.size;
-    let studentCount = 0;
+    // Count vehicles that are either explicitly selected OR have students selected
+    const explicitlySelectedVehicles = new Set(selectedVehicles);
+    const vehiclesWithStudents = new Set(selectedStudents.keys());
     
+    // Combine both sets - a vehicle counts as selected if it's explicitly selected OR has students selected
+    const allSelectedVehicleIds = new Set([...explicitlySelectedVehicles, ...vehiclesWithStudents]);
+    const vehicleCount = allSelectedVehicleIds.size;
+    
+    let studentCount = 0;
     // Count selected students
     for (const studentSet of selectedStudents.values()) {
         studentCount += studentSet.size;
     }
-    
-    console.log('updateSelectionSummary:', { vehicleCount, studentCount, selectedVehicles: Array.from(selectedVehicles), selectedStudents: Array.from(selectedStudents.entries()) });
     
     const totalSelections = vehicleCount + studentCount;
     const summaryElement = document.getElementById('selectionSummary');
@@ -680,12 +688,12 @@ function updateSelectionSummary() {
         
         const mainCountText = selectionParts.join(', ');
         
-        // Count by vehicle type for breakdown
+        // Count by vehicle type for breakdown (use all selected vehicles)
         let busCount = 0;
         let taxiCount = 0;
         let parentCount = 0;
         
-        selectedVehicles.forEach(vehicleId => {
+        allSelectedVehicleIds.forEach(vehicleId => {
             const vehicle = allVehicles.find(v => v.id === vehicleId);
             if (vehicle) {
                 if (vehicle.type === 'bus') busCount++;
@@ -720,22 +728,27 @@ async function confirmSelectedChanges() {
         let successCount = 0;
         let errorCount = 0;
         
+        // Get all vehicles that should be processed (explicitly selected OR have students selected)
+        const explicitlySelectedVehicles = new Set(selectedVehicles);
+        const vehiclesWithStudents = new Set(selectedStudents.keys());
+        const allVehiclesToProcess = new Set([...explicitlySelectedVehicles, ...vehiclesWithStudents]);
+        
         // Process selected vehicles
-        if (selectedVehicles.size > 0) {
+        if (allVehiclesToProcess.size > 0) {
             const response = await fetch('/api/vehicles/batch-toggle', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    vehicleIds: Array.from(selectedVehicles)
+                    vehicleIds: Array.from(allVehiclesToProcess)
                 })
             });
             
             if (response.ok) {
-                successCount += selectedVehicles.size;
+                successCount += allVehiclesToProcess.size;
             } else {
-                errorCount += selectedVehicles.size;
+                errorCount += allVehiclesToProcess.size;
             }
         }
         
