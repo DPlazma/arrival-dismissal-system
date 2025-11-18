@@ -469,11 +469,9 @@ function displayBuses() {
         const statusText = getStatusText(bus.status);
         const studentCount = bus.students.length;
         const isSelected = selectedVehicles.has(bus.id);
-        const hasSelectedStudents = selectedStudents.has(bus.id) && selectedStudents.get(bus.id).size > 0;
-        const isVisuallySelected = isSelected || hasSelectedStudents;
         
         return `
-            <div class="bus-admin-card ${bus.status} ${isVisuallySelected ? 'selected' : ''}" data-vehicle-id="${bus.id}" onclick="toggleVehicleSelection(${bus.id})">
+            <div class="bus-admin-card ${bus.status} ${isSelected ? 'selected' : ''}" data-vehicle-id="${bus.id}" onclick="toggleVehicleSelection(${bus.id})">
                 <div class="bus-number">Bus ${escapeHtml(bus.number)}</div>
                 <div class="bus-status ${bus.status}">${statusText}</div>
                 <div class="bus-student-list">
@@ -529,12 +527,10 @@ function displayTaxis() {
         const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : taxi.type === 'adhoc' ? '📝' : '🚕';
         const vehicleName = taxi.type === 'adhoc' ? taxi.description : (taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number}`);
         const isSelected = selectedVehicles.has(taxi.id);
-        const hasSelectedStudents = selectedStudents.has(taxi.id) && selectedStudents.get(taxi.id).size > 0;
-        const isVisuallySelected = isSelected || hasSelectedStudents;
         const isAdhoc = taxi.type === 'adhoc';
         
         return `
-            <div class="taxi-admin-card ${taxi.status} ${isVisuallySelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
+            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
                 <div class="taxi-header">
                     <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
                     <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
