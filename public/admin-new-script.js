@@ -3,6 +3,7 @@ let allVehicles = [];
 let filteredVehicles = [];
 let currentTime = new Date();
 let selectedVehicles = new Set();
+let selectedStudents = new Map(); // vehicleId -> Set of student indices
 let adminSettings = {
     schoolName: '',
     logoUrl: '',
@@ -475,9 +476,9 @@ function displayBuses() {
         const isSelected = selectedVehicles.has(bus.id);
         
         return `
-            <div class="bus-admin-card ${bus.status} ${isSelected ? 'selected' : ''}" data-vehicle-id="${bus.id}">
+            <div class="bus-admin-card ${bus.status} ${isSelected ? 'selected' : ''}" data-vehicle-id="${bus.id}" onclick="toggleVehicleSelection(${bus.id})">
                 <div class="vehicle-selection">
-                    <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${bus.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${bus.id})">
+                    <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${bus.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${bus.id}); event.stopPropagation()">
                 </div>
                 <div class="bus-number">Bus ${escapeHtml(bus.number)}</div>
                 <div class="bus-status ${bus.status}">${statusText}</div>
@@ -537,19 +538,25 @@ function displayTaxis() {
         const isAdhoc = taxi.type === 'adhoc';
         
         return `
-            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}">
+            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
                 <div class="taxi-header">
                     <div class="vehicle-selection">
-                        <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${taxi.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${taxi.id})">
+                        <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${taxi.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${taxi.id}); event.stopPropagation()">
                     </div>
                     <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
                     <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
                 </div>
                 
                 <div class="taxi-students">
-                    ${taxi.students.map((student, index) => `
-                        <div class="student-item ${student.status || 'not-arrived'}" 
-                             onclick="toggleStudentStatus(${taxi.id}, ${index})">
+                    ${taxi.students.map((student, index) => {
+                        const studentKey = `${taxi.id}-${index}`;
+                        const isStudentSelected = selectedStudents.has(taxi.id) && selectedStudents.get(taxi.id).has(index);
+                        return `
+                        <div class="student-item ${student.status || 'not-arrived'} ${isStudentSelected ? 'selected' : ''}" 
+                             onclick="toggleStudentSelection(${taxi.id}, ${index})">
+                            <div class="student-selection">
+                                <input type="checkbox" class="student-checkbox" data-vehicle-id="${taxi.id}" data-student-index="${index}" ${isStudentSelected ? 'checked' : ''} onchange="toggleStudentSelection(${taxi.id}, ${index}); event.stopPropagation()">
+                            </div>
                             <div class="student-info">
                                 <div class="student-name">${escapeHtml(student.name)}</div>
                                 <div class="student-pathway">${escapeHtml(student.pathway)}</div>
@@ -558,7 +565,7 @@ function displayTaxis() {
                                 ${getStatusText(student.status || 'not-arrived')}
                             </div>
                         </div>
-                    `).join('')}
+                    `}).join('')}
                 </div>
                 
                 ${taxi.arrivalTime ? `<div style="font-size: 0.8rem; color: #666; text-align: center; margin-top: 1rem;">
@@ -634,14 +641,42 @@ function toggleVehicleSelection(vehicleId) {
     displayVehicles(); // Refresh display to show selection state
 }
 
+// Toggle student selection for batch operations
+function toggleStudentSelection(vehicleId, studentIndex) {
+    if (!selectedStudents.has(vehicleId)) {
+        selectedStudents.set(vehicleId, new Set());
+    }
+    
+    const vehicleSelections = selectedStudents.get(vehicleId);
+    if (vehicleSelections.has(studentIndex)) {
+        vehicleSelections.delete(studentIndex);
+        if (vehicleSelections.size === 0) {
+            selectedStudents.delete(vehicleId);
+        }
+    } else {
+        vehicleSelections.add(studentIndex);
+    }
+    
+    updateSelectionSummary();
+    displayVehicles(); // Refresh display to show selection state
+}
+
 // Update the selection summary panel
 function updateSelectionSummary() {
-    const count = selectedVehicles.size;
+    const vehicleCount = selectedVehicles.size;
+    let studentCount = 0;
+    
+    // Count selected students
+    for (const studentSet of selectedStudents.values()) {
+        studentCount += studentSet.size;
+    }
+    
+    const totalSelections = vehicleCount + studentCount;
     const summaryElement = document.getElementById('selectionSummary');
     const confirmBtn = document.getElementById('confirmChangesBtn');
     
-    if (count === 0) {
-        summaryElement.innerHTML = '<div class="selection-count">No vehicles selected</div>';
+    if (totalSelections === 0) {
+        summaryElement.innerHTML = '<div class="selection-count">No vehicles or students selected</div>';
         confirmBtn.disabled = true;
     } else {
         // Count by type
@@ -677,38 +712,76 @@ function updateSelectionSummary() {
 
 // Confirm selected changes
 async function confirmSelectedChanges() {
-    if (selectedVehicles.size === 0) return;
+    const totalSelections = selectedVehicles.size + Array.from(selectedStudents.values()).reduce((sum, set) => sum + set.size, 0);
+    if (totalSelections === 0) return;
     
     try {
-        const response = await fetch('/api/vehicles/batch-toggle', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                vehicleIds: Array.from(selectedVehicles)
-            })
-        });
+        let successCount = 0;
+        let errorCount = 0;
         
-        if (response.ok) {
-            const result = await response.json();
-            showToast(result.message, 'success');
-            selectedVehicles.clear();
-            updateSelectionSummary();
-            await loadAllVehicles();
+        // Process selected vehicles
+        if (selectedVehicles.size > 0) {
+            const response = await fetch('/api/vehicles/batch-toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    vehicleIds: Array.from(selectedVehicles)
+                })
+            });
+            
+            if (response.ok) {
+                successCount += selectedVehicles.size;
+            } else {
+                errorCount += selectedVehicles.size;
+            }
+        }
+        
+        // Process selected students
+        for (const [vehicleId, studentIndices] of selectedStudents.entries()) {
+            for (const studentIndex of studentIndices) {
+                try {
+                    const response = await fetch(`/api/vehicles/${vehicleId}/students/${studentIndex}/toggle`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                    console.error('Error updating student:', error);
+                }
+            }
+        }
+        
+        // Clear selections and refresh
+        selectedVehicles.clear();
+        selectedStudents.clear();
+        updateSelectionSummary();
+        await loadAllVehicles();
+        
+        if (errorCount === 0) {
+            showToast(`Successfully updated ${successCount} item${successCount !== 1 ? 's' : ''}`, 'success');
         } else {
-            const error = await response.json();
-            showToast(error.error || 'Failed to update vehicles', 'error');
+            showToast(`Updated ${successCount} item${successCount !== 1 ? 's' : ''}, ${errorCount} error${errorCount !== 1 ? 's' : ''}`, 'error');
         }
     } catch (error) {
         console.error('Error confirming changes:', error);
-        showToast('Error updating vehicles', 'error');
+        showToast('Error updating selections', 'error');
     }
 }
 
 // Clear all selections
 function clearSelection() {
     selectedVehicles.clear();
+    selectedStudents.clear();
     updateSelectionSummary();
     displayVehicles();
 }

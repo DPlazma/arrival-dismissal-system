@@ -218,6 +218,26 @@ body {
     position: relative;
 }
 
+/* Student Selection */
+.student-selection {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    z-index: 5;
+}
+
+.student-checkbox {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.student-item.selected {
+    background: rgba(96, 165, 250, 0.1);
+    border-left: 3px solid var(--primary-color);
+}
+
 /* Ad-hoc Entry */
 .adhoc-entry {
     display: flex;
@@ -273,19 +293,18 @@ body {
 
 .selection-actions {
     display: flex;
-    flex-direction: column;
     gap: 0.75rem;
 }
 
 .selection-actions .btn {
-    width: 100%;
-    justify-content: center;
+    flex: 1;
+    text-align: center;
 }
 
 /* Adjust main content to make room for selection panel */
 .bus-admin-section,
 .taxi-admin-section {
-    margin-left: 340px;
+    margin-left: 0;
 }
 
 @media (max-width: 768px) {
