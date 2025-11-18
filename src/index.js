@@ -352,7 +352,7 @@ app.post('/api/students', (req, res) => {
         id: Math.max(...students.map(s => s.id), 0) + 1,
         name: name.trim(),
         transport: transport.trim(),
-        studentClass: studentClass.trim(),
+        pathway: studentClass.trim(),
         arrived: false,
         arrivalTime: null
     };
@@ -378,7 +378,7 @@ app.put('/api/students/:id', (req, res) => {
     
     if (name) student.name = name.trim();
     if (transport) student.transport = transport.trim();
-    if (studentClass) student.studentClass = studentClass.trim();
+    if (studentClass) student.pathway = studentClass.trim();
     
     res.json({ message: 'Student updated successfully', student: student });
 });
@@ -563,7 +563,7 @@ app.post('/api/vehicles/adhoc', async (req, res) => {
         id: Math.max(...students.map(s => s.id), 0) + 1,
         name: description.trim(), // Use description as student name
         transport: 'Ad-hoc', // Mark as ad-hoc transport
-        studentClass: 'Special Transport', // Special class for ad-hoc
+        pathway: 'Special Transport', // Special pathway for ad-hoc
         arrived: true, // Ad-hoc are immediately arrived
         arrivalTime: new Date().toISOString()
     };
