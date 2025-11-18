@@ -390,6 +390,103 @@ app.post('/api/vehicles/:id/students/:studentIndex/toggle', async (req, res) => 
     });
 });
 
+// Batch toggle multiple vehicles
+app.post('/api/vehicles/batch-toggle', async (req, res) => {
+    const { vehicleIds } = req.body;
+    
+    if (!Array.isArray(vehicleIds) || vehicleIds.length === 0) {
+        return res.status(400).json({ error: 'vehicleIds must be a non-empty array' });
+    }
+    
+    const updatedVehicles = [];
+    const errors = [];
+    
+    for (const vehicleId of vehicleIds) {
+        const vehicle = vehicles.find(v => v.id === parseInt(vehicleId));
+        
+        if (!vehicle) {
+            errors.push(`Vehicle ${vehicleId} not found`);
+            continue;
+        }
+        
+        if (vehicle.type === 'bus') {
+            // Cycle through states for buses: not-arrived -> arrived -> absent -> not-arrived
+            if (vehicle.status === 'not-arrived') {
+                vehicle.status = 'arrived';
+                vehicle.arrivalTime = new Date().toISOString();
+            } else if (vehicle.status === 'arrived') {
+                vehicle.status = 'absent';
+                vehicle.arrivalTime = null;
+            } else { // absent
+                vehicle.status = 'not-arrived';
+                vehicle.arrivalTime = null;
+            }
+        } else {
+            // For taxis/parent drop, calculate status based on students
+            updateTaxiStatus(vehicle);
+        }
+        
+        vehicle.lastModified = new Date().toISOString();
+        updatedVehicles.push(vehicle);
+        
+        console.log(`${vehicle.type} ${vehicle.number} status changed to: ${vehicle.status} at ${new Date().toLocaleString()}`);
+    }
+    
+    // Save data after all updates
+    await saveVehiclesData();
+    
+    if (errors.length > 0) {
+        res.status(207).json({ // 207 Multi-Status
+            message: `Updated ${updatedVehicles.length} vehicles, ${errors.length} errors`,
+            updated: updatedVehicles.length,
+            errors: errors
+        });
+    } else {
+        res.json({ 
+            message: `Successfully updated ${updatedVehicles.length} vehicle${updatedVehicles.length !== 1 ? 's' : ''}`,
+            updated: updatedVehicles.length
+        });
+    }
+});
+
+// Add ad-hoc vehicle
+app.post('/api/vehicles/adhoc', async (req, res) => {
+    const { description } = req.body;
+    
+    if (!description || typeof description !== 'string' || description.trim().length === 0) {
+        return res.status(400).json({ error: 'Description is required' });
+    }
+    
+    if (description.length > 50) {
+        return res.status(400).json({ error: 'Description must be 50 characters or less' });
+    }
+    
+    // Generate unique ID for ad-hoc vehicle
+    const id = Date.now(); // Simple timestamp-based ID
+    
+    const adhocVehicle = {
+        id: id,
+        type: 'adhoc',
+        description: description.trim(),
+        status: 'not-arrived',
+        students: [], // Ad-hoc vehicles don't have predefined students
+        arrivalTime: null,
+        lastModified: new Date().toISOString()
+    };
+    
+    vehicles.push(adhocVehicle);
+    
+    // Save data
+    await saveVehiclesData();
+    
+    console.log(`Ad-hoc vehicle added: ${description} at ${new Date().toLocaleString()}`);
+    
+    res.json({ 
+        message: `Ad-hoc vehicle "${description}" added`,
+        vehicle: adhocVehicle
+    });
+});
+
 // Helper function to update vehicle status based on type and students
 function updateVehicleStatus(vehicle) {
     if (vehicle.type === 'bus') {
@@ -653,8 +750,20 @@ app.put('/api/students/:id', (req, res) => {
 });
 
 // Reset all vehicle arrivals (for new day)
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', async (req, res) => {
     let resetCount = 0;
+    let adhocRemoved = 0;
+    
+    // Remove ad-hoc vehicles
+    vehicles = vehicles.filter(vehicle => {
+        if (vehicle.type === 'adhoc') {
+            adhocRemoved++;
+            return false;
+        }
+        return true;
+    });
+    
+    // Reset remaining vehicles
     vehicles.forEach(vehicle => {
         if (vehicle.status !== 'not-arrived') {
             vehicle.status = 'not-arrived';
@@ -672,7 +781,10 @@ app.post('/api/reset', (req, res) => {
         }
     });
     
-    console.log(`All vehicle arrivals reset for new day: ${resetCount} vehicles reset`);
+    // Save data after reset
+    await saveVehiclesData();
+    
+    console.log(`All vehicle arrivals reset for new day: ${resetCount} vehicles reset, ${adhocRemoved} ad-hoc vehicles removed`);
     res.json({ message: 'All arrivals reset successfully' });
 });
 
@@ -768,6 +880,18 @@ function resetForAfternoonDismissal() {
 
 function resetForNewDay() {
     let resetCount = 0;
+    let adhocRemoved = 0;
+    
+    // Remove ad-hoc vehicles
+    vehicles = vehicles.filter(vehicle => {
+        if (vehicle.type === 'adhoc') {
+            adhocRemoved++;
+            return false;
+        }
+        return true;
+    });
+    
+    // Reset remaining vehicles
     vehicles.forEach(vehicle => {
         if (vehicle.status !== 'not-arrived') {
             vehicle.status = 'not-arrived';
@@ -783,7 +907,7 @@ function resetForNewDay() {
         }
     });
     
-    console.log(`🌅 End of day reset: ${resetCount} vehicles reset to 'not-arrived' for new day at ${new Date().toLocaleString()}`);
+    console.log(`🌅 End of day reset: ${resetCount} vehicles reset to 'not-arrived', ${adhocRemoved} ad-hoc vehicles removed for new day at ${new Date().toLocaleString()}`);
 }
 
 // Schedule automated resets

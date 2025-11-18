@@ -86,6 +86,7 @@
                 <option value="bus">Buses Only</option>
                 <option value="taxi">Taxis Only</option>
                 <option value="parent">Parent Drop Only</option>
+                <option value="adhoc">Ad-hoc Only</option>
                 <option value="arrived">Arrived</option>
                 <option value="partial">Partial</option>
                 <option value="not-arrived">Not Arrived</option>
@@ -119,6 +120,23 @@
         </div>
     </div>
 
+    <!-- Selection Panel -->
+    <div class="selection-panel" id="selectionPanel">
+        <div class="selection-summary" id="selectionSummary">
+            <div class="selection-count">No vehicles selected</div>
+        </div>
+        <div class="selection-actions">
+            <button class="btn btn-success" id="confirmChangesBtn" onclick="confirmSelectedChanges()" disabled>
+                <span class="btn-icon">✓</span>
+                Confirm Changes
+            </button>
+            <button class="btn btn-secondary" onclick="clearSelection()">
+                <span class="btn-icon">✕</span>
+                Clear
+            </button>
+        </div>
+    </div>
+
     <!-- Bus Section -->
     <div class="bus-admin-section">
         <h2 class="section-title">🚌 School Buses</h2>
@@ -132,6 +150,16 @@
     <div class="taxi-admin-section">
         <h2 class="section-title">🚕 Taxis & Parent Drop-offs</h2>
         <p class="section-description">Click individual students to toggle their status</p>
+        
+        <!-- Ad-hoc Entry -->
+        <div class="adhoc-entry">
+            <input type="text" id="adhocInput" placeholder="Add ad-hoc vehicle (e.g., Private taxi)" maxlength="50">
+            <button class="btn btn-secondary btn-sm" onclick="addAdhocVehicle()">
+                <span class="btn-icon">+</span>
+                Add
+            </button>
+        </div>
+        
         <div class="taxi-admin-grid" id="taxiAdminGrid">
             <!-- Taxis will be populated here -->
         </div>

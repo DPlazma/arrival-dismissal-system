@@ -2,6 +2,7 @@
 let allVehicles = [];
 let filteredVehicles = [];
 let currentTime = new Date();
+let selectedVehicles = new Set();
 let adminSettings = {
     schoolName: '',
     logoUrl: '',
@@ -398,6 +399,14 @@ document.addEventListener('DOMContentLoaded', function() {
     pathwayFilter.addEventListener('change', applyFilters);
     sortBy.addEventListener('change', handleSortChange);
     
+    // Set up ad-hoc input
+    const adhocInput = document.getElementById('adhocInput');
+    adhocInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addAdhocVehicle();
+        }
+    });
+    
     // Set up form submission
     const addVehicleForm = document.getElementById('addVehicleForm');
     addVehicleForm.addEventListener('submit', handleAddVehicle);
@@ -431,6 +440,7 @@ async function loadAllVehicles() {
             displayVehicles();
             updateStats();
             applyFilters();
+            updateSelectionSummary(); // Update selection panel
         } else {
             showToast('Failed to load vehicles', 'error');
         }
@@ -462,9 +472,13 @@ function displayBuses() {
     busGrid.innerHTML = sortedBuses.map(bus => {
         const statusText = getStatusText(bus.status);
         const studentCount = bus.students.length;
+        const isSelected = selectedVehicles.has(bus.id);
         
         return `
-            <div class="bus-admin-card ${bus.status}" data-vehicle-id="${bus.id}" onclick="toggleBusStatus(${bus.id})">
+            <div class="bus-admin-card ${bus.status} ${isSelected ? 'selected' : ''}" data-vehicle-id="${bus.id}">
+                <div class="vehicle-selection">
+                    <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${bus.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${bus.id})">
+                </div>
                 <div class="bus-number">Bus ${escapeHtml(bus.number)}</div>
                 <div class="bus-status ${bus.status}">${statusText}</div>
                 <div class="bus-student-list">
@@ -487,7 +501,7 @@ function displayBuses() {
 // Display taxis in admin grid
 function displayTaxis() {
     const taxiGrid = document.getElementById('taxiAdminGrid');
-    const taxis = filteredVehicles.filter(vehicle => vehicle.type === 'taxi' || vehicle.type === 'parent');
+    const taxis = filteredVehicles.filter(vehicle => vehicle.type === 'taxi' || vehicle.type === 'parent' || vehicle.type === 'adhoc');
     
     if (taxis.length === 0) {
         taxiGrid.innerHTML = `
@@ -501,16 +515,33 @@ function displayTaxis() {
     }
     
     // Sort taxis numerically by number only (ignore status changes)
-    const sortedTaxis = [...taxis].sort((a, b) => parseInt(a.number) - parseInt(b.number));
+    const sortedTaxis = [...taxis].sort((a, b) => {
+        // Ad-hoc vehicles go to the end
+        if (a.type === 'adhoc' && b.type !== 'adhoc') return 1;
+        if (b.type === 'adhoc' && a.type !== 'adhoc') return -1;
+        
+        // For regular vehicles, sort by number
+        if (a.type !== 'adhoc' && b.type !== 'adhoc') {
+            return parseInt(a.number) - parseInt(b.number);
+        }
+        
+        // Ad-hoc vehicles sorted by description
+        return a.description.localeCompare(b.description);
+    });
     
     taxiGrid.innerHTML = sortedTaxis.map(taxi => {
         const statusBadge = getStatusBadge(taxi.status);
-        const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : '🚕';
-        const vehicleName = taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number}`;
+        const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : taxi.type === 'adhoc' ? '📝' : '🚕';
+        const vehicleName = taxi.type === 'adhoc' ? taxi.description : (taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number}`);
+        const isSelected = selectedVehicles.has(taxi.id);
+        const isAdhoc = taxi.type === 'adhoc';
         
         return `
-            <div class="taxi-admin-card ${taxi.status}" data-vehicle-id="${taxi.id}">
+            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}">
                 <div class="taxi-header">
+                    <div class="vehicle-selection">
+                        <input type="checkbox" class="vehicle-checkbox" data-vehicle-id="${taxi.id}" ${isSelected ? 'checked' : ''} onchange="toggleVehicleSelection(${taxi.id})">
+                    </div>
                     <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
                     <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
                 </div>
@@ -592,6 +623,130 @@ async function toggleStudentStatus(vehicleId, studentIndex) {
     }
 }
 
+// Toggle vehicle selection for batch operations
+function toggleVehicleSelection(vehicleId) {
+    if (selectedVehicles.has(vehicleId)) {
+        selectedVehicles.delete(vehicleId);
+    } else {
+        selectedVehicles.add(vehicleId);
+    }
+    updateSelectionSummary();
+    displayVehicles(); // Refresh display to show selection state
+}
+
+// Update the selection summary panel
+function updateSelectionSummary() {
+    const count = selectedVehicles.size;
+    const summaryElement = document.getElementById('selectionSummary');
+    const confirmBtn = document.getElementById('confirmChangesBtn');
+    
+    if (count === 0) {
+        summaryElement.innerHTML = '<div class="selection-count">No vehicles selected</div>';
+        confirmBtn.disabled = true;
+    } else {
+        // Count by type
+        let busCount = 0;
+        let taxiCount = 0;
+        let parentCount = 0;
+        
+        selectedVehicles.forEach(vehicleId => {
+            const vehicle = allVehicles.find(v => v.id === vehicleId);
+            if (vehicle) {
+                if (vehicle.type === 'bus') busCount++;
+                else if (vehicle.type === 'taxi') taxiCount++;
+                else if (vehicle.type === 'parent') parentCount++;
+            }
+        });
+        
+        let summaryText = '';
+        if (busCount > 0) summaryText += `${busCount} bus${busCount !== 1 ? 'es' : ''}`;
+        if (taxiCount > 0) {
+            if (summaryText) summaryText += ', ';
+            summaryText += `${taxiCount} taxi${taxiCount !== 1 ? 'es' : ''}`;
+        }
+        if (parentCount > 0) {
+            if (summaryText) summaryText += ', ';
+            summaryText += `${parentCount} parent drop-off${parentCount !== 1 ? 's' : ''}`;
+        }
+        
+        summaryElement.innerHTML = `<div class="selection-count">${count} vehicle${count !== 1 ? 's' : ''} selected</div>
+                                   <div style="font-size: 0.9rem; color: var(--secondary-text-color); margin-top: 0.5rem;">${summaryText}</div>`;
+        confirmBtn.disabled = false;
+    }
+}
+
+// Confirm selected changes
+async function confirmSelectedChanges() {
+    if (selectedVehicles.size === 0) return;
+    
+    try {
+        const response = await fetch('/api/vehicles/batch-toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vehicleIds: Array.from(selectedVehicles)
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast(result.message, 'success');
+            selectedVehicles.clear();
+            updateSelectionSummary();
+            await loadAllVehicles();
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to update vehicles', 'error');
+        }
+    } catch (error) {
+        console.error('Error confirming changes:', error);
+        showToast('Error updating vehicles', 'error');
+    }
+}
+
+// Clear all selections
+function clearSelection() {
+    selectedVehicles.clear();
+    updateSelectionSummary();
+    displayVehicles();
+}
+
+// Add ad-hoc vehicle
+async function addAdhocVehicle() {
+    const input = document.getElementById('adhocInput');
+    const description = input.value.trim();
+    
+    if (!description) {
+        showToast('Please enter a description for the ad-hoc vehicle', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/vehicles/adhoc', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ description })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast(result.message, 'success');
+            input.value = '';
+            await loadAllVehicles();
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to add ad-hoc vehicle', 'error');
+        }
+    } catch (error) {
+        console.error('Error adding ad-hoc vehicle:', error);
+        showToast('Error adding ad-hoc vehicle', 'error');
+    }
+}
+
 // Apply filters
 function applyFilters() {
     const vehicleFilter = document.getElementById('vehicleFilter').value;
@@ -601,7 +756,7 @@ function applyFilters() {
     
     // Apply vehicle filter
     if (vehicleFilter) {
-        if (['bus', 'taxi', 'parent'].includes(vehicleFilter)) {
+        if (['bus', 'taxi', 'parent', 'adhoc'].includes(vehicleFilter)) {
             filtered = filtered.filter(vehicle => vehicle.type === vehicleFilter);
         } else if (['arrived', 'partial', 'not-arrived', 'absent'].includes(vehicleFilter)) {
             filtered = filtered.filter(vehicle => vehicle.status === vehicleFilter);
