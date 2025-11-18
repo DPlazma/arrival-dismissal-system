@@ -525,7 +525,9 @@ function displayTaxis() {
     taxiGrid.innerHTML = sortedTaxis.map(taxi => {
         const statusBadge = getStatusBadge(taxi.status);
         const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : taxi.type === 'adhoc' ? '📝' : '🚕';
-        const vehicleName = taxi.type === 'adhoc' ? (taxi.description || 'Ad-hoc Vehicle') : (taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number || 'Unknown'}`);
+        const vehicleName = taxi.description ? taxi.description : 
+                           (taxi.type === 'parent' ? 'Parent Drop-off' : 
+                           `Taxi ${taxi.number || 'Unknown'}`);
         const isSelected = selectedVehicles.has(taxi.id);
         const isAdhoc = taxi.type === 'adhoc';
         
