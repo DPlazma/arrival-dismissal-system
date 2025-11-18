@@ -238,7 +238,47 @@ let vehicles = [
     }
 ];
 
-// Route to serve the display page (main interface for staff)
+// Sample student data for individual student management
+let students = [
+    // This will be populated with individual students and ad-hoc entries
+];
+
+// Data persistence for students
+const STUDENTS_DATA_FILE = path.join(__dirname, '..', 'data', 'students-data.json');
+
+// Save students data to file
+async function saveStudentsData() {
+    try {
+        // Ensure data directory exists
+        const dataDir = path.dirname(STUDENTS_DATA_FILE);
+        await fs.mkdir(dataDir, { recursive: true });
+
+        await fs.writeFile(STUDENTS_DATA_FILE, JSON.stringify(students, null, 2));
+        console.log('Students data saved successfully');
+    } catch (error) {
+        console.error('Error saving students data:', error);
+    }
+}
+
+// Load students data from file
+async function loadStudentsData() {
+    try {
+        const data = await fs.readFile(STUDENTS_DATA_FILE, 'utf8');
+        students = JSON.parse(data);
+        console.log('Students data loaded successfully');
+        return true;
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            console.log('No saved students data file found, using empty array');
+            students = [];
+            return false;
+        } else {
+            console.error('Error loading students data:', error);
+            students = [];
+            return false;
+        }
+    }
+}
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/display-new.html'));
 });
@@ -296,6 +336,62 @@ app.get('/api/vehicles/taxis', (req, res) => {
 app.get('/api/vehicles/arrived', (req, res) => {
     const arrivedVehicles = vehicles.filter(vehicle => vehicle.status === 'arrived');
     res.json(arrivedVehicles);
+});
+
+// Student management routes
+app.post('/api/students', (req, res) => {
+    const name = req.body.name;
+    const transport = req.body.transport;
+    const studentClass = req.body.class;
+    
+    if (!name || !transport || !studentClass) {
+        return res.status(400).json({ error: 'Name, transport, and class are required' });
+    }
+    
+    const newStudent = {
+        id: Math.max(...students.map(s => s.id), 0) + 1,
+        name: name.trim(),
+        transport: transport.trim(),
+        studentClass: studentClass.trim(),
+        arrived: false,
+        arrivalTime: null
+    };
+    
+    students.push(newStudent);
+    
+    console.log(`New student added: ${newStudent.name}`);
+    res.status(201).json({ message: 'Student added successfully', student: newStudent });
+});
+
+// Update student information
+app.put('/api/students/:id', (req, res) => {
+    const studentId = parseInt(req.params.id);
+    const student = students.find(s => s.id === studentId);
+    
+    if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+    }
+    
+    const name = req.body.name;
+    const transport = req.body.transport;
+    const studentClass = req.body.class;
+    
+    if (name) student.name = name.trim();
+    if (transport) student.transport = transport.trim();
+    if (studentClass) student.studentClass = studentClass.trim();
+    
+    res.json({ message: 'Student updated successfully', student: student });
+});
+
+// Get arrived students
+app.get('/api/students/arrived', (req, res) => {
+    const arrivedStudents = students.filter(student => student.arrived);
+    res.json(arrivedStudents);
+});
+
+// Get all students
+app.get('/api/students', (req, res) => {
+    res.json(students);
 });
 
 // Toggle vehicle status (for buses: not-arrived -> arrived -> absent -> not-arrived)
@@ -450,41 +546,38 @@ app.post('/api/vehicles/batch-toggle', async (req, res) => {
     }
 });
 
-// Add ad-hoc vehicle
+// Add ad-hoc transport (creates a student entry instead of vehicle)
 app.post('/api/vehicles/adhoc', async (req, res) => {
     const { description } = req.body;
-    
+
     if (!description || typeof description !== 'string' || description.trim().length === 0) {
         return res.status(400).json({ error: 'Description is required' });
     }
-    
+
     if (description.length > 50) {
         return res.status(400).json({ error: 'Description must be 50 characters or less' });
     }
-    
-    // Generate unique ID for ad-hoc vehicle
-    const id = Date.now(); // Simple timestamp-based ID
-    
-    const adhocVehicle = {
-        id: id,
-        type: 'adhoc',
-        description: description.trim(),
-        status: 'not-arrived',
-        students: [], // Ad-hoc vehicles don't have predefined students
-        arrivalTime: null,
-        lastModified: new Date().toISOString()
+
+    // Create as a student instead of vehicle
+    const newStudent = {
+        id: Math.max(...students.map(s => s.id), 0) + 1,
+        name: description.trim(), // Use description as student name
+        transport: 'Ad-hoc', // Mark as ad-hoc transport
+        studentClass: 'Special Transport', // Special class for ad-hoc
+        arrived: true, // Ad-hoc are immediately arrived
+        arrivalTime: new Date().toISOString()
     };
-    
-    vehicles.push(adhocVehicle);
-    
-    // Save data
-    await saveVehiclesData();
-    
-    console.log(`Ad-hoc vehicle added: ${description} at ${new Date().toLocaleString()}`);
-    
-    res.json({ 
-        message: `Ad-hoc vehicle "${description}" added`,
-        vehicle: adhocVehicle
+
+    students.push(newStudent);
+
+    // Save student data
+    await saveStudentsData();
+
+    console.log(`Ad-hoc transport added: ${description} at ${new Date().toLocaleString()}`);
+
+    res.json({
+        message: `Ad-hoc transport "${description}" added`,
+        student: newStudent
     });
 });
 
@@ -709,45 +802,6 @@ app.get('/api/csv-template', (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="vehicle_import_template.csv"');
     res.send(csvContent);
-});
-app.post('/api/students', (req, res) => {
-    const { name, transport, class: studentClass } = req.body;
-    
-    if (!name || !transport || !studentClass) {
-        return res.status(400).json({ error: 'Name, transport, and class are required' });
-    }
-    
-    const newStudent = {
-        id: Math.max(...students.map(s => s.id)) + 1,
-        name: name.trim(),
-        transport: transport.trim(),
-        class: studentClass.trim(),
-        arrived: false,
-        arrivalTime: null
-    };
-    
-    students.push(newStudent);
-    
-    console.log(`New student added: ${newStudent.name}`);
-    res.status(201).json({ message: 'Student added successfully', student: newStudent });
-});
-
-// Update student information
-app.put('/api/students/:id', (req, res) => {
-    const studentId = parseInt(req.params.id);
-    const student = students.find(s => s.id === studentId);
-    
-    if (!student) {
-        return res.status(404).json({ error: 'Student not found' });
-    }
-    
-    const { name, transport, class: studentClass } = req.body;
-    
-    if (name) student.name = name.trim();
-    if (transport) student.transport = transport.trim();
-    if (studentClass) student.class = studentClass.trim();
-    
-    res.json({ message: 'Student updated successfully', student: student });
 });
 
 // Reset all vehicle arrivals (for new day)
@@ -1034,6 +1088,7 @@ app.post('/api/reset/day', (req, res) => {
 async function startServer() {
     // Try to load saved data first
     const dataLoaded = await loadVehiclesData();
+    const studentsLoaded = await loadStudentsData();
 
     // Load admin settings
     await loadAdminSettings();
@@ -1068,12 +1123,16 @@ async function startServer() {
     });
 }
 
-startServer();
+startServer().catch(error => {
+    console.error('Error starting server:', error);
+    process.exit(1);
+});
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
     console.log('\n🛑 Received SIGINT, saving data before shutdown...');
     await saveVehiclesData();
+    await saveStudentsData();
     console.log('✅ Data saved, shutting down gracefully');
     process.exit(0);
 });
@@ -1081,6 +1140,7 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
     console.log('\n🛑 Received SIGTERM, saving data before shutdown...');
     await saveVehiclesData();
+    await saveStudentsData();
     console.log('✅ Data saved, shutting down gracefully');
     process.exit(0);
 });
