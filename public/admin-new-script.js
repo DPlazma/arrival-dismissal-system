@@ -540,10 +540,9 @@ function displayTaxis() {
                     ${taxi.students.map((student, index) => {
                         const studentKey = `${taxi.id}-${index}`;
                         const isStudentSelected = selectedStudents.has(taxi.id) && selectedStudents.get(taxi.id).has(index);
-                        console.log(`Student ${index} in vehicle ${taxi.id}: selectedStudents.has(${taxi.id}) = ${selectedStudents.has(taxi.id)}, has index ${index} = ${selectedStudents.has(taxi.id) ? selectedStudents.get(taxi.id).has(index) : 'N/A'}`);
                         return `
                         <div class="student-item ${student.status || 'not-arrived'} ${isStudentSelected ? 'selected' : ''}" 
-                             onclick="toggleStudentSelection(${taxi.id}, ${index})">
+                             onclick="toggleStudentSelection(${taxi.id}, ${index}); event.stopPropagation()">
                             <div class="student-info">
                                 <div class="student-name">${escapeHtml(student.name)}</div>
                                 <div class="student-pathway">${escapeHtml(student.pathway)}</div>
@@ -644,27 +643,20 @@ function toggleVehicleSelection(vehicleId) {
 
 // Toggle student selection for batch operations
 function toggleStudentSelection(vehicleId, studentIndex) {
-    console.log('toggleStudentSelection called:', { vehicleId, studentIndex });
-    
     if (!selectedStudents.has(vehicleId)) {
         selectedStudents.set(vehicleId, new Set());
     }
     
     const vehicleSelections = selectedStudents.get(vehicleId);
-    console.log('Before toggle:', Array.from(vehicleSelections));
-    
     if (vehicleSelections.has(studentIndex)) {
         vehicleSelections.delete(studentIndex);
         if (vehicleSelections.size === 0) {
             selectedStudents.delete(vehicleId);
         }
-        console.log('Removed student', studentIndex);
     } else {
         vehicleSelections.add(studentIndex);
-        console.log('Added student', studentIndex);
     }
     
-    console.log('After toggle:', Array.from(vehicleSelections));
     updateSelectionSummary();
     displayVehicles(); // Refresh display to show selection state
 }
