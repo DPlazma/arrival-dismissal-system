@@ -14,12 +14,12 @@ RUN npm install --only=production
 COPY . .
 RUN rm -rf /app/data
 
-# Create data directory and set permissions
-RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data
-
 # Create a non-root user to run the application
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
+
+# Create data directory and set permissions
+RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data
 
 # Change ownership of the app directory to the nodejs user
 RUN chown -R nodejs:nodejs /app
