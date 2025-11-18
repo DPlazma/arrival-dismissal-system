@@ -665,7 +665,20 @@ function updateSelectionSummary() {
         summaryElement.innerHTML = '<div class="selection-count">No vehicles or students selected</div>';
         confirmBtn.disabled = true;
     } else {
-        // Count by type
+        // Build selection summary text
+        let selectionParts = [];
+        
+        if (vehicleCount > 0) {
+            selectionParts.push(`${vehicleCount} vehicle${vehicleCount !== 1 ? 's' : ''}`);
+        }
+        
+        if (studentCount > 0) {
+            selectionParts.push(`${studentCount} student${studentCount !== 1 ? 's' : ''}`);
+        }
+        
+        const mainCountText = selectionParts.join(', ');
+        
+        // Count by vehicle type for breakdown
         let busCount = 0;
         let taxiCount = 0;
         let parentCount = 0;
@@ -690,8 +703,8 @@ function updateSelectionSummary() {
             summaryText += `${parentCount} parent drop-off${parentCount !== 1 ? 's' : ''}`;
         }
         
-        summaryElement.innerHTML = `<div class="selection-count">${vehicleCount} vehicle${vehicleCount !== 1 ? 's' : ''} selected</div>
-                                   <div style="font-size: 0.9rem; color: var(--secondary-text-color); margin-top: 0.5rem;">${summaryText}</div>`;
+        summaryElement.innerHTML = `<div class="selection-count">${mainCountText} selected</div>
+                                   ${summaryText ? `<div style="font-size: 0.9rem; color: var(--secondary-text-color); margin-top: 0.5rem;">${summaryText}</div>` : ''}`;
         confirmBtn.disabled = false;
     }
 }
