@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-25
+
+### Added
+- **Server-Sent Events (SSE)** — Real-time push updates to display pages, replacing heavy polling
+- **Server-side UI Settings API** — Theme, school name, dark mode, and pathway label stored on server instead of localStorage
+- **HTTP Request Logging** — Morgan middleware for request monitoring in container logs
+- **API Test Suite** — Automated tests using Node.js built-in test runner covering health, vehicles, auth, and settings
+- **Keyboard Shortcuts** — Alt+R (Refresh), Alt+D (Display view), Alt+A (Admin view), Alt+M (Management modal), Escape (close modals)
+- **User-facing Error Notifications** — All API errors now shown to users via toast/notification instead of silent console logs
+- **SSE Connection Status** — Display page shows reconnection notices when live updates disconnect/reconnect
+- **Reset PIN Function** — Admin can now reset/remove the PIN from the security settings panel
+- **Loading Feedback** — Confirm Changes button shows processing state during batch operations
+
+### Changed
+- **Modular Server Architecture** — Split 1088-line monolith into 7 focused modules (data, SSE, middleware, scheduler, routes/vehicles, routes/students, routes/admin)
+- **Replaced alert() with showToast()** — All browser alerts replaced with consistent toast notification system
+- **Reduced Polling** — Display page reduced from 10s polling to 30s fallback (SSE handles real-time)
+
+### Fixed
+- **Data Loss on Power Outage** — Atomic writes with temp file + rename prevent corruption; data saved immediately after every mutation
+- **Data Not Persisting After Restart** — All vehicle, student, and settings changes saved to disk immediately
+- **Service Worker Caching** — Corrected cached file list and bumped cache version
+
+### Security
+- **Bcrypt PIN Hashing** — Admin PIN stored as bcrypt hash instead of plaintext; automatic migration of existing PINs
+- **Rate Limiting** — PIN verification limited to 10 attempts per 15 minutes
+- **Authentication Middleware** — All mutation API routes require authenticated session
+- **CORS Removed** — Unnecessary permissive CORS headers removed
+- **Session Secret** — Configurable via SESSION_SECRET environment variable
+
+### Improved
+- **Accessibility** — Semantic HTML elements (header, main, section, nav), ARIA roles, aria-live regions for dynamic content, aria-labels on interactive elements
+- **Automated Backups** — Timestamped backups created before resets, keeps last 10
+- **Graceful Shutdown** — Data saved on SIGINT/SIGTERM before process exits
+- **Auto-save Interval** — Background save every 5 minutes as safety net
+- **Docker Compose** — Removed obsolete `version` key
+
 ## [1.0.0] - 2025-11-05
 
 ### Added

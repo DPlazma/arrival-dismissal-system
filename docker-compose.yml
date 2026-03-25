@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   arrival-dismissal:
     build: .
@@ -8,6 +6,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-to-a-random-secret}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "healthcheck.js"]

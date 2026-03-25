@@ -27,13 +27,13 @@
 </head>
 <body>
     <!-- Side Menu -->
-    <div class="side-menu" id="sideMenu">
+    <nav class="side-menu" id="sideMenu" role="navigation" aria-label="Display controls">
         <div class="side-menu-content">
             <h3>📋 Controls</h3>
             
             <div class="control-group">
                 <label>Filter by Vehicle Type:</label>
-                <select id="vehicleTypeFilter" class="filter-select">
+                <select id="vehicleTypeFilter" class="filter-select" aria-label="Filter by vehicle type">
                     <option value="">All Vehicles</option>
                     <option value="bus">Buses Only</option>
                     <option value="taxi">Taxis Only</option>
@@ -43,7 +43,7 @@
             
             <div class="control-group">
                 <label id="pathwayFilterLabel">Filter by Pathway:</label>
-                <select id="pathwayFilter" class="filter-select">
+                <select id="pathwayFilter" class="filter-select" aria-labelledby="pathwayFilterLabel">
                     <option value="">All Pathways</option>
                     <option value="Preparations">Preparations</option>
                     <option value="Horizons">Horizons</option>
@@ -82,6 +82,28 @@
                 </label>
             </div>
             
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+            
+            <div class="control-group">
+                <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">🔊 Audio Alerts</label>
+                <button class="btn btn-secondary" onclick="toggleAudio()" style="width: 100%; margin-bottom: 0.5rem;">
+                    <span id="audioToggleIcon">🔊</span>
+                    <span>Toggle Sound</span>
+                </button>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="ttsToggle" onchange="toggleTTS()">
+                    <span class="checkmark"></span>
+                    Voice Announcements
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <button class="btn btn-secondary" onclick="toggleFullscreen()" style="width: 100%;">
+                    <span id="fullscreenIcon">⛶</span>
+                    <span>Fullscreen</span>
+                </button>
+            </div>
+            
             <div class="control-group">
                 <button class="btn btn-secondary" onclick="openAdminView()">
                     <span class="btn-icon">⚙️</span>
@@ -89,58 +111,63 @@
                 </button>
             </div>
         </div>
-    </div>
+    </nav>
 
     <!-- Menu Toggle Button -->
-    <button class="menu-toggle" id="menuToggle">☰</button>
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle controls menu" aria-expanded="false" aria-controls="sideMenu">☰</button>
 
     <!-- Main Container -->
-    <div class="main-container" id="mainContainer">
+    <main class="main-container" id="mainContainer">
         <div class="container">
             <!-- Header -->
-            <div class="header">
+            <header class="header">
                 <div class="header-content">
                     <h1 class="title">Vehicle Arrivals</h1>
                 </div>
                 <div class="current-time" id="currentTime"></div>
                 
-                <div class="header-stats">
+                <div class="header-stats" role="status" aria-live="polite" aria-label="Arrival statistics">
                     <div class="stat-card">
-                        <div class="stat-number" id="arrivedVehicles">0</div>
+                        <div class="stat-number" id="arrivedVehicles" aria-label="Vehicles arrived">0</div>
                         <div class="stat-label">Vehicles Arrived</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="totalVehicles">0</div>
+                        <div class="stat-number" id="totalVehicles" aria-label="Total vehicles">0</div>
                         <div class="stat-label">Total Vehicles</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="arrivedStudents">0</div>
+                        <div class="stat-number" id="arrivedStudents" aria-label="Students arrived">0</div>
                         <div class="stat-label">Students Arrived</div>
                     </div>
                 </div>
+            </header>
+
+            <!-- Smart Announcements Banner -->
+            <div class="announcement-banner hidden" id="announcementBanner" aria-live="polite">
+                <div class="announcement-track"></div>
             </div>
 
             <!-- Bus Row Section -->
-            <div class="bus-section">
+            <section class="bus-section" aria-label="School buses">
                 <h2 class="section-title">🚌 School Buses</h2>
-                <div class="bus-row" id="busRow">
+                <div class="bus-row" id="busRow" role="list" aria-live="polite">
                     <!-- Buses will be populated here -->
                 </div>
-            </div>
+            </section>
 
             <!-- Taxi Grid Section -->
-            <div class="taxi-section">
+            <section class="taxi-section" aria-label="Taxis and parent drop-offs">
                 <h2 class="section-title">🚕 Taxis & Parent Drop-offs</h2>
-                <div class="taxi-grid" id="taxiGrid">
+                <div class="taxi-grid" id="taxiGrid" role="list" aria-live="polite">
                     <!-- Taxis will be populated here -->
                 </div>
-            </div>
+            </section>
         </div>
-    </div>
+    </main>
 
     <!-- Loading Indicator -->
-    <div class="loading-indicator hidden" id="loadingIndicator">
-        <div class="loading-spinner"></div>
+    <div class="loading-indicator hidden" id="loadingIndicator" role="alert" aria-live="assertive">
+        <div class="loading-spinner" aria-hidden="true"></div>
         <div class="loading-text">Refreshing...</div>
     </div>
 

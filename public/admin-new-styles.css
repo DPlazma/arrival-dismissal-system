@@ -330,6 +330,14 @@ body {
     outline: none;
     text-decoration: none;
     white-space: nowrap;
+    min-height: 48px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+    transform: scale(0.96);
+    transition: transform 0.1s ease;
 }
 
 .btn-primary {
@@ -491,11 +499,97 @@ body {
     transition: all 0.3s ease;
     position: relative;
     box-shadow: var(--card-shadow);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.taxi-admin-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
 }
 
 .taxi-admin-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+}
+
+.taxi-admin-card.has-note {
+    box-shadow: 0 0 0 2px var(--warning-color), var(--card-shadow);
+}
+
+/* Vehicle note badge */
+.vehicle-note-badge {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+    color: #92400e;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    animation: note-pulse 2s ease-in-out infinite;
+}
+
+.dark-mode .vehicle-note-badge {
+    color: #fbbf24;
+}
+
+@keyframes note-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Vehicle note action buttons */
+.vehicle-note-actions {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    justify-content: center;
+}
+
+.note-btn {
+    background: rgba(96, 165, 250, 0.08);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-color);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.note-btn:hover {
+    background: rgba(96, 165, 250, 0.15);
+    border-color: var(--primary-color);
+}
+
+.note-btn.active {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: var(--warning-color);
+    color: #92400e;
+    font-weight: 600;
+}
+
+.dark-mode .note-btn.active {
+    color: #fbbf24;
+}
+
+.note-btn.clear {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--error-color);
+    padding: 0.3rem 0.4rem;
+}
+
+.note-btn.clear:hover {
+    background: rgba(239, 68, 68, 0.15);
 }
 
 .taxi-admin-card.arrived {
@@ -565,6 +659,14 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     background: var(--card-background);
+    min-height: 48px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.student-item:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
 }
 
 .student-item:hover {
@@ -666,16 +768,20 @@ body {
 .modal-close {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     cursor: pointer;
     color: var(--secondary-text-color);
-    width: 30px;
-    height: 30px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     transition: all 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .modal-close:hover {
@@ -824,7 +930,31 @@ body {
     color: #666;
 }
 
-/* Responsive Design */
+/* Responsive Design - Tablet Landscape */
+@media (max-width: 1024px) {
+    .header-actions {
+        gap: 0.5rem;
+    }
+    
+    .header-actions .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .bus-admin-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .taxi-admin-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+    
+    .bus-admin-section, .taxi-admin-section {
+        padding: 1.25rem;
+    }
+}
+
+/* Responsive Design - Tablet Portrait & Mobile */
 @media (max-width: 768px) {
     body {
         padding: 0.5rem;
@@ -841,6 +971,14 @@ body {
     
     .header-actions {
         justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .header-actions .btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+        flex: 1 1 auto;
+        min-width: 0;
     }
     
     .controls {
@@ -1035,6 +1173,16 @@ body {
 }
 
 @media (max-width: 480px) {
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
     .bus-admin-grid {
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     }
@@ -1049,11 +1197,12 @@ body {
     }
     
     .modal-content.large-modal {
-        width: 98vw !important;
-        height: 98vh !important;
-        margin: 1vh auto !important;
-        max-width: 98vw !important;
-        min-height: 98vh !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        max-width: 100vw !important;
+        min-height: 100vh !important;
+        border-radius: 0 !important;
     }
     
     .student-management-tabs {
@@ -1314,7 +1463,8 @@ body {
     
     .sub-content {
         padding: 1rem;
-        min-height: calc(100vh - 200px);
+        min-height: calc(100vh - 260px);
+        max-height: calc(100vh - 260px);
     }
     
     .sub-content h4 {
@@ -1357,6 +1507,150 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 1rem;
     margin-top: 0.5rem;
+}
+
+/* Activity Log Styles */
+.activity-log-list {
+    max-height: calc(95vh - 280px);
+    overflow-y: auto;
+    padding: 0.5rem 0;
+}
+
+.log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    transition: background 0.15s ease;
+}
+
+.log-entry:hover {
+    background: rgba(var(--primary-rgb), 0.03);
+}
+
+.log-icon {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    width: 1.5rem;
+    text-align: center;
+}
+
+.log-time {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 0.85rem;
+    min-width: 90px;
+}
+
+.log-action {
+    flex-shrink: 0;
+    font-weight: 600;
+    text-transform: capitalize;
+    color: var(--primary-color);
+    min-width: 120px;
+}
+
+.log-detail {
+    color: var(--text-primary);
+    flex: 1;
+}
+
+/* Insights Styles */
+.insights-summary-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(var(--primary-rgb), 0.05);
+    border-radius: 8px;
+}
+
+.insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: calc(95vh - 320px);
+    overflow-y: auto;
+}
+
+.insight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--card-background);
+    transition: box-shadow 0.2s ease;
+}
+
+.insight-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.insight-alert {
+    border-left: 4px solid #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.insight-warning {
+    border-left: 4px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.insight-info {
+    border-left: 4px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.insight-pattern {
+    border-left: 4px solid #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.insight-stat {
+    border-left: 4px solid #8b5cf6;
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.insight-icon {
+    flex-shrink: 0;
+    font-size: 1.5rem;
+    width: 2rem;
+    text-align: center;
+}
+
+.insight-body {
+    flex: 1;
+}
+
+.insight-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.insight-detail {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .log-entry {
+        flex-wrap: wrap;
+        gap: 0.25rem 0.5rem;
+    }
+    .log-action {
+        min-width: auto;
+    }
+    .log-detail {
+        width: 100%;
+        padding-left: 2.25rem;
+    }
 }
 
 .theme-option {

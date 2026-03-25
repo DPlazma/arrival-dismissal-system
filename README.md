@@ -90,10 +90,14 @@ Double-click `start.bat` to automatically install and run the application.
 4. **See the record** appear in the records section
 
 ### Keyboard Shortcuts
-- `Alt + A`: Record Arrival
-- `Alt + D`: Record Dismissal  
-- `Alt + R`: Refresh Records
-- `Enter` (in name field): Focus on Arrival button
+- `Alt + R`: Refresh data
+- `Alt + D`: Switch to Display view (from Admin)
+- `Alt + A`: Switch to Admin view (from Display)
+- `Alt + M`: Open Data Management modal (Admin)
+- `Alt + S`: Open Settings modal (Admin)
+- `Alt + L`: Open Activity Log (Admin)
+- `Escape`: Close open modals/menus
+- `Enter` (in ad-hoc input): Add ad-hoc vehicle
 - `Tab`: Navigate between elements
 
 ### Features

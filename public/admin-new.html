@@ -27,45 +27,53 @@
 </head>
 <body>
     <!-- Header -->
-    <div class="header">
+    <header class="header">
         <div class="header-content">
             <h1 class="title">Vehicle Management</h1>
-            <div class="header-actions">
+            <nav class="header-actions" aria-label="Admin actions">
                 <div class="current-time" id="currentTime"></div>
                 <button class="btn btn-secondary" onclick="openDisplayView()">
                     <span class="btn-icon">📺</span>
                     View Display
                 </button>
                 <button class="btn btn-secondary" onclick="showStudentManagementModal()">
+                    <span class="btn-icon">📋</span>
+                    Data
+                </button>
+                <button class="btn btn-secondary" onclick="showActivityLogModal()">
+                    <span class="btn-icon">📜</span>
+                    Log
+                </button>
+                <button class="btn btn-secondary" onclick="showSettingsModal()">
                     <span class="btn-icon">⚙</span>
-                    Manage
+                    Settings
                 </button>
                 <button class="btn btn-outline" onclick="logout()">
                     <span class="btn-icon">🚪</span>
                     Logout
                 </button>
-            </div>
+            </nav>
         </div>
         
-        <div class="header-stats">
+        <div class="header-stats" role="status" aria-live="polite" aria-label="Vehicle statistics">
             <div class="stat-card">
-                <div class="stat-number" id="totalVehicles">0</div>
+                <div class="stat-number" id="totalVehicles" aria-label="Total vehicles">0</div>
                 <div class="stat-label">Total Vehicles</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="arrivedVehicles">0</div>
+                <div class="stat-number" id="arrivedVehicles" aria-label="Arrived vehicles">0</div>
                 <div class="stat-label">Arrived</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="partialVehicles">0</div>
+                <div class="stat-number" id="partialVehicles" aria-label="Partial vehicles">0</div>
                 <div class="stat-label">Partial</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="absentVehicles">0</div>
+                <div class="stat-number" id="absentVehicles" aria-label="Absent vehicles">0</div>
                 <div class="stat-label">Absent</div>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Controls -->
     <div class="controls">
@@ -138,46 +146,46 @@
     </div>
 
     <!-- Bus Section -->
-    <div class="bus-admin-section">
+    <section class="bus-admin-section" aria-label="School buses">
         <h2 class="section-title">🚌 School Buses</h2>
         <p class="section-description">Click buses to toggle: Not Arrived → Arrived → Absent</p>
-        <div class="bus-admin-grid" id="busAdminGrid">
+        <div class="bus-admin-grid" id="busAdminGrid" role="list" aria-live="polite">
             <!-- Buses will be populated here -->
         </div>
-    </div>
+    </section>
 
     <!-- Taxi Section -->
-    <div class="taxi-admin-section">
+    <section class="taxi-admin-section" aria-label="Taxis and parent drop-offs">
         <h2 class="section-title">🚕 Taxis & Parent Drop-offs</h2>
         <p class="section-description">Click individual students to toggle their status</p>
         
         <!-- Ad-hoc Entry -->
         <div class="adhoc-entry">
-            <input type="text" id="adhocInput" placeholder="Add ad-hoc vehicle (e.g., Private taxi)" maxlength="50">
+            <input type="text" id="adhocInput" placeholder="Add ad-hoc vehicle (e.g., Private taxi)" maxlength="50" aria-label="Ad-hoc vehicle name">
             <button class="btn btn-secondary btn-sm" onclick="addAdhocVehicle()">
                 <span class="btn-icon">+</span>
                 Add
             </button>
         </div>
         
-        <div class="taxi-admin-grid" id="taxiAdminGrid">
+        <div class="taxi-admin-grid" id="taxiAdminGrid" role="list" aria-live="polite">
             <!-- Taxis will be populated here -->
         </div>
-    </div>
+    </section>
 
     <!-- Loading Indicator -->
-    <div class="loading-indicator hidden" id="loadingIndicator">
-        <div class="loading-spinner"></div>
+    <div class="loading-indicator hidden" id="loadingIndicator" role="alert" aria-live="assertive">
+        <div class="loading-spinner" aria-hidden="true"></div>
         <div class="loading-text">Loading...</div>
     </div>
 
     <!-- Success/Error Messages -->
-    <div class="toast hidden" id="toast">
+    <div class="toast hidden" id="toast" role="alert" aria-live="assertive">
         <div class="toast-content"></div>
     </div>
 
     <!-- Student Management Modal -->
-    <div class="modal hidden" id="studentManagementModal">
+    <div class="modal hidden" id="studentManagementModal" role="dialog" aria-modal="true" aria-label="Management Center">
         <div class="modal-content large-modal">
             <div class="modal-header">
                 <h3>Management Center</h3>
@@ -187,7 +195,6 @@
                 <div class="student-management-tabs">
                     <button class="tab-btn main-tab active" onclick="switchMainTab('vehicles')">Manage Vehicles</button>
                     <button class="tab-btn main-tab" onclick="switchMainTab('students')">Manage Students</button>
-                    <button class="tab-btn main-tab" onclick="switchMainTab('settings')">Settings</button>
                 </div>
                 
                 <!-- Vehicle Management Sub-tabs -->
@@ -207,14 +214,7 @@
                     </div>
                 </div>
                 
-                <!-- Settings Sub-tabs -->
-                <div class="sub-tabs-container hidden" id="settings-subtabs">
-                    <div class="sub-tabs">
-                        <button class="sub-tab-btn active" onclick="switchSubTab('settings', 'general')">General</button>
-                        <button class="sub-tab-btn" onclick="switchSubTab('settings', 'theme')">Theme</button>
-                        <button class="sub-tab-btn" onclick="switchSubTab('settings', 'security')">Security</button>
-                    </div>
-                </div>
+
                 
                 <!-- Vehicle Management Content -->
                 <div class="main-content active" id="vehicles-content">
@@ -389,109 +389,126 @@
                     </div>
                 </div>
                 
-                <!-- Settings Content -->
-                <div class="main-content" id="settings-content">
-                    <!-- General Settings Sub-tab -->
-                    <div class="sub-content active" id="settings-general">
-                        <div class="management-header">
-                            <h4>General Settings</h4>
-                        </div>
-                        
-                        <div class="settings-section">
-                            <div class="form-group">
-                                <label for="schoolName">School Name:</label>
-                                <input type="text" id="schoolName" placeholder="Enter school name" maxlength="100">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="logoUpload">School Logo:</label>
-                                <div class="logo-upload-section">
-                                    <input type="file" id="logoUpload" accept="image/*" onchange="previewLogo()">
-                                    <div class="logo-preview">
-                                        <img id="logoPreview" src="" alt="Logo Preview" style="display: none; max-width: 200px; max-height: 100px;">
-                                        <div id="logoPlaceholder">No logo uploaded</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="pathwayLabel">Student Grouping Label:</label>
-                                <input type="text" id="pathwayLabel" placeholder="e.g., Pathway, Year, Class, Grade" maxlength="20" value="Pathway">
-                                <small>What do you call your student groupings? (Pathway, Year, Class, etc.)</small>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-primary" onclick="saveGeneralSettings()">Save Settings</button>
-                            </div>
-                        </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal hidden" id="settingsModal" role="dialog" aria-modal="true" aria-label="Settings">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" onclick="hideSettingsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="sub-tabs-container active" id="settings-subtabs">
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" onclick="switchSettingsTab('general')">General</button>
+                        <button class="sub-tab-btn" onclick="switchSettingsTab('theme')">Theme</button>
+                        <button class="sub-tab-btn" onclick="switchSettingsTab('security')">Security</button>
+                    </div>
+                </div>
+                
+                <!-- General Settings -->
+                <div class="sub-content active" id="settings-general">
+                    <div class="management-header">
+                        <h4>General Settings</h4>
                     </div>
                     
-                    <!-- Theme Settings Sub-tab -->
-                    <div class="sub-content" id="settings-theme">
-                        <div class="management-header">
-                            <h4>Theme Settings</h4>
+                    <div class="settings-section">
+                        <div class="form-group">
+                            <label for="schoolName">School Name:</label>
+                            <input type="text" id="schoolName" placeholder="Enter school name" maxlength="100">
                         </div>
                         
-                        <div class="settings-section">
-                            <div class="form-group">
-                                <label>Color Theme:</label>
-                                <div class="theme-options">
-                                    <div class="theme-option" data-theme="blue" onclick="selectTheme('blue')">
-                                        <div class="theme-preview" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);"></div>
-                                        <span>Blue (Default)</span>
-                                    </div>
-                                    <div class="theme-option" data-theme="green" onclick="selectTheme('green')">
-                                        <div class="theme-preview" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"></div>
-                                        <span>Green</span>
-                                    </div>
-                                    <div class="theme-option" data-theme="purple" onclick="selectTheme('purple')">
-                                        <div class="theme-preview" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"></div>
-                                        <span>Purple</span>
-                                    </div>
-                                    <div class="theme-option" data-theme="orange" onclick="selectTheme('orange')">
-                                        <div class="theme-preview" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"></div>
-                                        <span>Orange</span>
-                                    </div>
+                        <div class="form-group">
+                            <label for="logoUpload">School Logo:</label>
+                            <div class="logo-upload-section">
+                                <input type="file" id="logoUpload" accept="image/*" onchange="previewLogo()">
+                                <div class="logo-preview">
+                                    <img id="logoPreview" src="" alt="Logo Preview" style="display: none; max-width: 200px; max-height: 100px;">
+                                    <div id="logoPlaceholder">No logo uploaded</div>
                                 </div>
                             </div>
-                            
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
-                                    <span class="checkmark"></span>
-                                    <span>Enable Dark Mode</span>
-                                </label>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-primary" onclick="saveThemeSettings()">Save Theme</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Security Settings Sub-tab -->
-                    <div class="sub-content" id="settings-security">
-                        <div class="management-header">
-                            <h4>Security Settings</h4>
                         </div>
                         
-                        <div class="settings-section">
-                            <div class="form-group">
-                                <label for="adminPin">Admin PIN (4-6 digits):</label>
-                                <input type="password" id="adminPin" placeholder="Enter PIN" maxlength="6" pattern="[0-9]{4,6}">
-                                <small class="form-help">This PIN will be required to access the admin area</small>
+                        <div class="form-group">
+                            <label for="pathwayLabel">Student Grouping Label:</label>
+                            <input type="text" id="pathwayLabel" placeholder="e.g., Pathway, Year, Class, Grade" maxlength="20" value="Pathway">
+                            <small>What do you call your student groupings? (Pathway, Year, Class, etc.)</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-primary" onclick="saveGeneralSettings()">Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Theme Settings -->
+                <div class="sub-content" id="settings-theme">
+                    <div class="management-header">
+                        <h4>Theme Settings</h4>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <div class="form-group">
+                            <label>Color Theme:</label>
+                            <div class="theme-options">
+                                <div class="theme-option" data-theme="blue" onclick="selectTheme('blue')">
+                                    <div class="theme-preview" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);"></div>
+                                    <span>Blue (Default)</span>
+                                </div>
+                                <div class="theme-option" data-theme="green" onclick="selectTheme('green')">
+                                    <div class="theme-preview" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"></div>
+                                    <span>Green</span>
+                                </div>
+                                <div class="theme-option" data-theme="purple" onclick="selectTheme('purple')">
+                                    <div class="theme-preview" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"></div>
+                                    <span>Purple</span>
+                                </div>
+                                <div class="theme-option" data-theme="orange" onclick="selectTheme('orange')">
+                                    <div class="theme-preview" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"></div>
+                                    <span>Orange</span>
+                                </div>
                             </div>
-                            
-                            <div class="form-group">
-                                <label for="confirmAdminPin">Confirm PIN:</label>
-                                <input type="password" id="confirmAdminPin" placeholder="Confirm PIN" maxlength="6" pattern="[0-9]{4,6}">
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-primary" onclick="saveSecuritySettings()">Save PIN</button>
-                                <button type="button" class="btn btn-secondary" onclick="testPinAccess()">Test PIN</button>
-                                <button type="button" class="btn btn-outline" onclick="resetPin()">Reset PIN</button>
-                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
+                                <span class="checkmark"></span>
+                                <span>Enable Dark Mode</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-primary" onclick="saveThemeSettings()">Save Theme</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Settings -->
+                <div class="sub-content" id="settings-security">
+                    <div class="management-header">
+                        <h4>Security Settings</h4>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <div class="form-group">
+                            <label for="adminPin">Admin PIN (4-6 digits):</label>
+                            <input type="password" id="adminPin" placeholder="Enter PIN" maxlength="6" pattern="[0-9]{4,6}">
+                            <small class="form-help">This PIN will be required to access the admin area</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirmAdminPin">Confirm PIN:</label>
+                            <input type="password" id="confirmAdminPin" placeholder="Confirm PIN" maxlength="6" pattern="[0-9]{4,6}">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-primary" onclick="saveSecuritySettings()">Save PIN</button>
+                            <button type="button" class="btn btn-secondary" onclick="testPinAccess()">Test PIN</button>
+                            <button type="button" class="btn btn-outline" onclick="resetPin()">Reset PIN</button>
                         </div>
                     </div>
                 </div>
@@ -499,8 +516,69 @@
         </div>
     </div>
 
+    <!-- Activity Log & Insights Modal -->
+    <div class="modal hidden" id="activityLogModal" role="dialog" aria-modal="true" aria-label="Activity Log">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>Activity Log & Insights</h3>
+                <button class="modal-close" onclick="hideActivityLogModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="sub-tabs-container active" id="log-subtabs">
+                    <div class="sub-tabs">
+                        <button class="sub-tab-btn active" onclick="switchLogTab('log')">Activity Log</button>
+                        <button class="sub-tab-btn" onclick="switchLogTab('insights')">Smart Insights</button>
+                    </div>
+                </div>
+
+                <!-- Activity Log Tab -->
+                <div class="sub-content active" id="log-log">
+                    <div class="management-header">
+                        <h4>Today's Activity</h4>
+                        <div class="management-controls">
+                            <select id="logDatePicker" onchange="loadLogForDate()">
+                                <option value="">Today</option>
+                            </select>
+                            <select id="logActionFilter" onchange="filterActivityLog()">
+                                <option value="">All Actions</option>
+                                <option value="vehicle_arrived">Arrivals</option>
+                                <option value="vehicle_absent">Absences</option>
+                                <option value="student_arrived">Student Arrivals</option>
+                                <option value="vehicle_added">Vehicles Added</option>
+                                <option value="vehicle_deleted">Vehicles Deleted</option>
+                                <option value="reset">Resets</option>
+                                <option value="admin">Admin Actions</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="activity-log-list" id="activityLogList">
+                        <div class="empty-management-state">Loading activity log...</div>
+                    </div>
+                </div>
+
+                <!-- Smart Insights Tab -->
+                <div class="sub-content" id="log-insights">
+                    <div class="management-header">
+                        <h4>Smart Insights</h4>
+                        <div class="management-controls">
+                            <select id="insightsDays" onchange="loadInsights()">
+                                <option value="7">Last 7 days</option>
+                                <option value="14" selected>Last 14 days</option>
+                                <option value="30">Last 30 days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="insights-summary" id="insightsSummary"></div>
+                    <div class="insights-list" id="insightsList">
+                        <div class="empty-management-state">Loading insights...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Vehicle Edit Modal -->
-    <div class="modal hidden" id="vehicleEditModal">
+    <div class="modal hidden" id="vehicleEditModal" role="dialog" aria-modal="true" aria-label="Edit Vehicle">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Edit Vehicle</h3>

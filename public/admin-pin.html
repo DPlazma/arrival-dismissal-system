@@ -247,23 +247,28 @@
     </div>
 
     <script>
-        // Load theme settings
-        function loadThemeSettings() {
-            // Load theme (default to blue)
-            const theme = localStorage.getItem('theme') || 'blue';
-            document.body.classList.add(`theme-${theme}`);
-
-            // Load dark mode preference
-            const storedDarkMode = localStorage.getItem('darkMode');
+        // Load theme settings from server
+        async function loadThemeSettings() {
+            let theme = 'blue';
             let isDarkMode = false;
 
-            if (storedDarkMode !== null) {
-                isDarkMode = storedDarkMode === 'true';
-            } else {
-                // Use system preference if no stored preference
+            try {
+                const response = await fetch('/api/ui-settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    theme = settings.theme || 'blue';
+                    isDarkMode = settings.darkMode || false;
+                }
+            } catch (error) {
+                console.error('Error loading theme:', error);
+            }
+
+            // Fallback to system preference if not set
+            if (!isDarkMode) {
                 isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
             }
 
+            document.body.classList.add(`theme-${theme}`);
             if (isDarkMode) {
                 document.body.classList.add('dark-mode');
             }

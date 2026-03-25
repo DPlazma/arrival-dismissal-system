@@ -10,47 +10,55 @@ let adminSettings = {
     theme: 'blue',
     darkMode: false,
     adminPin: '',
+    hasPin: false,
     pathwayLabel: 'Pathway'
 };
 
 // Settings Management Functions
 async function loadAdminSettings() {
-    // Load settings from localStorage (for UI preferences)
-    adminSettings.schoolName = localStorage.getItem('schoolName') || '';
-    adminSettings.logoUrl = localStorage.getItem('logoUrl') || '';
-    adminSettings.theme = localStorage.getItem('theme') || 'blue';
+    // Load UI settings from server
+    try {
+        const uiResponse = await fetch('/api/ui-settings');
+        if (uiResponse.ok) {
+            const uiSettings = await uiResponse.json();
+            adminSettings.schoolName = uiSettings.schoolName || '';
+            adminSettings.theme = uiSettings.theme || 'blue';
+            adminSettings.darkMode = uiSettings.darkMode;
+            adminSettings.pathwayLabel = uiSettings.pathwayLabel || 'Pathway';
+        }
+    } catch (error) {
+        console.error('Error loading UI settings:', error);
+    }
 
-    // Check for stored dark mode preference, otherwise use system preference
-    const storedDarkMode = localStorage.getItem('darkMode');
-    if (storedDarkMode !== null) {
-        adminSettings.darkMode = storedDarkMode === 'true';
-    } else {
-        // Use system preference if no stored preference
+    // If darkMode was never explicitly set, use system preference
+    if (adminSettings.darkMode === null || adminSettings.darkMode === undefined) {
         adminSettings.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
 
-    adminSettings.pathwayLabel = localStorage.getItem('pathwayLabel') || 'Pathway';
+    adminSettings.logoUrl = localStorage.getItem('logoUrl') || '';
 
-    // Load PIN from server
+    // Load PIN status from server (PIN is hashed server-side, not returned)
     try {
         const response = await fetch('/api/admin-settings');
         if (response.ok) {
             const serverSettings = await response.json();
-            adminSettings.adminPin = serverSettings.pin;
+            adminSettings.hasPin = serverSettings.hasPin;
         } else {
             console.warn('Could not load admin settings from server');
-            adminSettings.adminPin = '';
+            adminSettings.hasPin = false;
         }
     } catch (error) {
         console.error('Error loading admin settings:', error);
-        adminSettings.adminPin = '';
+        adminSettings.hasPin = false;
     }
 
     // Apply settings to UI
     document.getElementById('schoolName').value = adminSettings.schoolName;
     document.getElementById('pathwayLabel').value = adminSettings.pathwayLabel;
-    document.getElementById('adminPin').value = adminSettings.adminPin;
-    document.getElementById('confirmAdminPin').value = adminSettings.adminPin;
+    document.getElementById('adminPin').value = '';
+    document.getElementById('adminPin').placeholder = adminSettings.hasPin ? 'PIN is set (enter new to change)' : 'Enter new PIN';
+    document.getElementById('confirmAdminPin').value = '';
+    document.getElementById('confirmAdminPin').placeholder = adminSettings.hasPin ? 'Confirm new PIN' : 'Confirm PIN';
     if (adminSettings.logoUrl) {
         document.getElementById('logoPreview').src = adminSettings.logoUrl;
         document.getElementById('logoPreview').style.display = 'block';
@@ -74,12 +82,12 @@ async function loadAdminSettings() {
         document.body.classList.remove('dark-mode');
     }
     
-    // Listen for system theme changes (only if no stored preference)
-    if (storedDarkMode === null && window.matchMedia) {
+    // Listen for system theme changes
+    if (window.matchMedia) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.addEventListener('change', (e) => {
-            // Only auto-switch if user hasn't manually set a preference
-            if (localStorage.getItem('darkMode') === null) {
+            // Only auto-switch if dark mode hasn't been explicitly saved
+            if (!adminSettings.darkMode) {
                 adminSettings.darkMode = e.matches;
                 if (e.matches) {
                     document.body.classList.add('dark-mode');
@@ -91,26 +99,33 @@ async function loadAdminSettings() {
         });
     }
     
-    // Update PIN field
-    document.getElementById('adminPin').value = adminSettings.adminPin;
-    document.getElementById('confirmAdminPin').value = adminSettings.adminPin;
+    // Update PIN field placeholders (PIN is hashed, cannot be displayed)
+    document.getElementById('adminPin').value = '';
+    document.getElementById('adminPin').placeholder = adminSettings.hasPin ? 'PIN is set (enter new to change)' : 'Enter new PIN';
+    document.getElementById('confirmAdminPin').value = '';
+    document.getElementById('confirmAdminPin').placeholder = adminSettings.hasPin ? 'Confirm new PIN' : 'Confirm PIN';
     
     // Update pathway labels throughout the UI
     updatePathwayLabels();
 }
 
 // Load and apply theme settings (called on page load)
-function loadAdminThemeSettings() {
-    // Load theme from localStorage
-    adminSettings.theme = localStorage.getItem('theme') || 'blue';
-    adminSettings.pathwayLabel = localStorage.getItem('pathwayLabel') || 'Pathway';
-    
-    // Check for stored dark mode preference, otherwise use system preference
-    const storedDarkMode = localStorage.getItem('darkMode');
-    if (storedDarkMode !== null) {
-        adminSettings.darkMode = storedDarkMode === 'true';
-    } else {
-        // Use system preference if no stored preference
+async function loadAdminThemeSettings() {
+    // Load theme from server
+    try {
+        const response = await fetch('/api/ui-settings');
+        if (response.ok) {
+            const uiSettings = await response.json();
+            adminSettings.theme = uiSettings.theme || 'blue';
+            adminSettings.darkMode = uiSettings.darkMode;
+            adminSettings.pathwayLabel = uiSettings.pathwayLabel || 'Pathway';
+        }
+    } catch (error) {
+        console.error('Error loading theme settings:', error);
+    }
+
+    // If darkMode was never explicitly set, use system preference
+    if (adminSettings.darkMode === null || adminSettings.darkMode === undefined) {
         adminSettings.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     
@@ -124,12 +139,12 @@ function loadAdminThemeSettings() {
         document.body.classList.remove('dark-mode');
     }
     
-    // Listen for system theme changes (only if no stored preference)
-    if (storedDarkMode === null && window.matchMedia) {
+    // Listen for system theme changes
+    if (window.matchMedia) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         mediaQuery.addEventListener('change', (e) => {
             // Only auto-switch if user hasn't manually set a preference
-            if (localStorage.getItem('darkMode') === null) {
+            if (!adminSettings.darkMode) {
                 adminSettings.darkMode = e.matches;
                 if (e.matches) {
                     document.body.classList.add('dark-mode');
@@ -145,10 +160,21 @@ async function saveGeneralSettings() {
     const schoolName = document.getElementById('schoolName').value.trim();
     const pathwayLabel = document.getElementById('pathwayLabel').value.trim() || 'Pathway';
     
-    adminSettings.schoolName = schoolName;
-    adminSettings.pathwayLabel = pathwayLabel;
-    localStorage.setItem('schoolName', schoolName);
-    localStorage.setItem('pathwayLabel', pathwayLabel);
+    try {
+        const response = await fetch('/api/ui-settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolName, pathwayLabel })
+        });
+        if (!response.ok) throw new Error('Failed to save settings');
+        const result = await response.json();
+        adminSettings.schoolName = result.settings.schoolName;
+        adminSettings.pathwayLabel = result.settings.pathwayLabel;
+    } catch (error) {
+        console.error('Error saving general settings:', error);
+        showToast('Error saving settings. Please try again.', 'error');
+        return;
+    }
     
     // Update school name in headers
     updateSchoolNameDisplay();
@@ -156,7 +182,7 @@ async function saveGeneralSettings() {
     // Update pathway labels throughout the UI
     updatePathwayLabels();
     
-    alert('General settings saved successfully!');
+    showToast('General settings saved successfully!');
 }
 
 function updateSchoolNameDisplay() {
@@ -236,10 +262,20 @@ function previewLogo() {
     }
 }
 
-function saveThemeSettings() {
-    localStorage.setItem('theme', adminSettings.theme);
-    localStorage.setItem('darkMode', adminSettings.darkMode);
-    alert('Theme settings saved successfully!');
+async function saveThemeSettings() {
+    try {
+        const response = await fetch('/api/ui-settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ theme: adminSettings.theme, darkMode: adminSettings.darkMode })
+        });
+        if (!response.ok) throw new Error('Failed to save theme');
+    } catch (error) {
+        console.error('Error saving theme settings:', error);
+        showToast('Error saving theme. Please try again.', 'error');
+        return;
+    }
+    showToast('Theme settings saved successfully!');
 }
 
 function selectTheme(theme) {
@@ -309,12 +345,12 @@ async function saveSecuritySettings() {
     const confirmPin = document.getElementById('confirmAdminPin').value;
 
     if (pin !== confirmPin) {
-        alert('PINs do not match. Please try again.');
+        showToast('PINs do not match. Please try again.', 'error');
         return;
     }
 
     if (pin && pin.length < 4) {
-        alert('PIN must be at least 4 digits.');
+        showToast('PIN must be at least 4 digits.', 'error');
         return;
     }
 
@@ -328,15 +364,19 @@ async function saveSecuritySettings() {
         });
 
         if (response.ok) {
-            adminSettings.adminPin = pin;
-            alert('Security settings saved successfully!');
+            adminSettings.hasPin = true;
+            document.getElementById('adminPin').value = '';
+            document.getElementById('confirmAdminPin').value = '';
+            document.getElementById('adminPin').placeholder = 'PIN is set (enter new to change)';
+            document.getElementById('confirmAdminPin').placeholder = 'Confirm new PIN';
+            showToast('Security settings saved successfully!');
         } else {
             const error = await response.json();
-            alert('Error saving security settings: ' + (error.error || 'Unknown error'));
+            showToast('Error saving security settings: ' + (error.error || 'Unknown error'), 'error');
         }
     } catch (error) {
         console.error('Error saving security settings:', error);
-        alert('Network error. Please try again.');
+        showToast('Network error. Please try again.', 'error');
     }
 }
 
@@ -345,18 +385,44 @@ async function testPinAccess() {
         const response = await fetch('/api/admin-settings');
         if (response.ok) {
             const settings = await response.json();
-            if (settings.pin) {
+            if (settings.hasPin) {
                 // Redirect to PIN page to test access
                 window.location.href = '/admin-pin.html';
             } else {
-                alert('No PIN is currently set.');
+                showToast('No PIN is currently set.', 'error');
             }
         } else {
-            alert('Could not check PIN settings.');
+            showToast('Could not check PIN settings.', 'error');
         }
     } catch (error) {
         console.error('Error checking PIN settings:', error);
-        alert('Network error. Please try again.');
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+async function resetPin() {
+    if (!confirm('Are you sure you want to reset the admin PIN? This will remove PIN protection.')) {
+        return;
+    }
+    try {
+        const response = await fetch('/api/admin-settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: '' })
+        });
+        if (response.ok) {
+            adminSettings.hasPin = false;
+            document.getElementById('adminPin').value = '';
+            document.getElementById('confirmAdminPin').value = '';
+            document.getElementById('adminPin').placeholder = 'Enter new PIN';
+            document.getElementById('confirmAdminPin').placeholder = 'Confirm PIN';
+            showToast('PIN has been reset. Admin access is now unprotected.');
+        } else {
+            showToast('Failed to reset PIN.', 'error');
+        }
+    } catch (error) {
+        console.error('Error resetting PIN:', error);
+        showToast('Network error. Please try again.', 'error');
     }
 }
 
@@ -371,19 +437,19 @@ async function logout() {
                 // Redirect to display page
                 window.location.href = '/';
             } else {
-                alert('Error logging out. Please try again.');
+                showToast('Error logging out. Please try again.', 'error');
             }
         } catch (error) {
             console.error('Error logging out:', error);
-            alert('Network error. Please try again.');
+            showToast('Network error. Please try again.', 'error');
         }
     }
 }
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Load and apply theme settings
-    loadAdminThemeSettings();
+    await loadAdminThemeSettings();
     
     // Update time display
     updateCurrentTime();
@@ -407,6 +473,31 @@ document.addEventListener('DOMContentLoaded', function() {
             addAdhocVehicle();
         }
     });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Skip if user is typing in an input/textarea/select
+        if (e.target.matches('input, textarea, select')) return;
+
+        if (e.altKey && e.key === 'r') { e.preventDefault(); refreshData(); }
+        if (e.altKey && e.key === 'd') { e.preventDefault(); openDisplayView(); }
+        if (e.altKey && e.key === 'm') { e.preventDefault(); showStudentManagementModal(); }
+        if (e.altKey && e.key === 's') { e.preventDefault(); showSettingsModal(); }
+        if (e.altKey && e.key === 'l') { e.preventDefault(); showActivityLogModal(); }
+        if (e.key === 'Escape') {
+            // Close any open modal (check in order of priority)
+            if (!document.getElementById('vehicleEditModal').classList.contains('hidden')) {
+                hideVehicleEditModal();
+            } else if (!document.getElementById('activityLogModal').classList.contains('hidden')) {
+                hideActivityLogModal();
+            } else if (!document.getElementById('settingsModal').classList.contains('hidden')) {
+                hideSettingsModal();
+            } else if (!document.getElementById('studentManagementModal').classList.contains('hidden')) {
+                hideStudentManagementModal();
+            }
+        }
+    });
+
     // Auto-refresh every 30 seconds
     setInterval(loadAllVehicles, 30000);
 });
@@ -532,11 +623,13 @@ function displayTaxis() {
         const isAdhoc = taxi.type === 'adhoc';
         
         return `
-            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
+            <div class="taxi-admin-card ${taxi.status} ${isSelected ? 'selected' : ''} ${isAdhoc ? 'adhoc' : ''} ${taxi.note ? 'has-note' : ''}" data-vehicle-id="${taxi.id}" onclick="toggleVehicleSelection(${taxi.id})">
                 <div class="taxi-header">
                     <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
                     <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
                 </div>
+                
+                ${taxi.note ? `<div class="vehicle-note-badge" title="${escapeHtml(taxi.note)}">📌 ${escapeHtml(taxi.note)}</div>` : ''}
                 
                 <div class="taxi-students">
                     ${taxi.students.map((student, index) => {
@@ -556,7 +649,12 @@ function displayTaxis() {
                     `}).join('')}
                 </div>
                 
-                ${taxi.arrivalTime ? `<div style="font-size: 0.8rem; color: #666; text-align: center; margin-top: 1rem;">
+                <div class="vehicle-note-actions" onclick="event.stopPropagation()">
+                    <button class="note-btn ${taxi.note === '2nd Call' ? 'active' : ''}" onclick="setVehicleNote(${taxi.id}, '2nd Call')" title="Mark as 2nd call">📞 2nd Call</button>
+                    ${taxi.note ? `<button class="note-btn clear" onclick="setVehicleNote(${taxi.id}, '')" title="Clear note">✕</button>` : ''}
+                </div>
+                
+                ${taxi.arrivalTime ? `<div style="font-size: 0.8rem; color: #666; text-align: center; margin-top: 0.5rem;">
                     First arrival: ${formatTime(taxi.arrivalTime)}
                 </div>` : ''}
             </div>
@@ -615,6 +713,33 @@ async function toggleStudentStatus(vehicleId, studentIndex) {
     } catch (error) {
         console.error('Error toggling student status:', error);
         showToast('Error updating student status', 'error');
+    }
+}
+
+// Set a note on a vehicle (e.g., "2nd Call")
+async function setVehicleNote(vehicleId, note) {
+    try {
+        // If the vehicle already has this note, clear it (toggle behavior)
+        const vehicle = allVehicles.find(v => v.id === vehicleId);
+        const newNote = (vehicle && vehicle.note === note) ? '' : note;
+        
+        const response = await fetch(`/api/vehicles/${vehicleId}/note`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note: newNote })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast(result.message, 'success');
+            await loadAllVehicles();
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to set note', 'error');
+        }
+    } catch (error) {
+        console.error('Error setting vehicle note:', error);
+        showToast('Error setting note', 'error');
     }
 }
 
@@ -740,6 +865,10 @@ async function confirmSelectedChanges() {
     const totalSelections = selectedVehicles.size + Array.from(selectedStudents.values()).reduce((sum, set) => sum + set.size, 0);
     if (totalSelections === 0) return;
     
+    const confirmBtn = document.getElementById('confirmChangesBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class=\"btn-icon\">⏳</span> Processing...';
+    
     try {
         let successCount = 0;
         let errorCount = 0;
@@ -805,6 +934,9 @@ async function confirmSelectedChanges() {
     } catch (error) {
         console.error('Error confirming changes:', error);
         showToast('Error updating selections', 'error');
+    } finally {
+        confirmBtn.innerHTML = '<span class="btn-icon">✓</span> Confirm Changes';
+        updateSelectionSummary();
     }
 }
 
@@ -1076,15 +1208,186 @@ function showStudentManagementModal() {
 function showManagementModal() {
     document.getElementById('studentManagementModal').classList.remove('hidden');
     switchMainTab('vehicles'); // Default to vehicle management
-    
-    // Load admin settings
-    loadAdminSettings();
 }
 
 function hideStudentManagementModal() {
     document.getElementById('studentManagementModal').classList.add('hidden');
     clearCsvPreview();
     clearBulkForm();
+}
+
+// Settings Modal Functions
+function showSettingsModal() {
+    document.getElementById('settingsModal').classList.remove('hidden');
+    loadAdminSettings();
+    switchSettingsTab('general');
+}
+
+function hideSettingsModal() {
+    document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function switchSettingsTab(tab) {
+    // Remove active from all settings tabs and content
+    document.querySelectorAll('#settings-subtabs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#settingsModal .sub-content').forEach(content => content.classList.remove('active'));
+    
+    // Activate selected tab
+    const targetBtn = document.querySelector(`#settings-subtabs button[onclick*="${tab}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
+    document.getElementById(`settings-${tab}`).classList.add('active');
+}
+
+// Activity Log & Insights Modal Functions
+let allLogEntries = [];
+
+function showActivityLogModal() {
+    document.getElementById('activityLogModal').classList.remove('hidden');
+    loadLogDates();
+    loadActivityLog();
+}
+
+function hideActivityLogModal() {
+    document.getElementById('activityLogModal').classList.add('hidden');
+}
+
+function switchLogTab(tab) {
+    document.querySelectorAll('#log-subtabs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#activityLogModal .sub-content').forEach(content => content.classList.remove('active'));
+    const targetBtn = document.querySelector(`#log-subtabs button[onclick*="${tab}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
+    document.getElementById(`log-${tab}`).classList.add('active');
+
+    if (tab === 'insights') loadInsights();
+}
+
+async function loadLogDates() {
+    try {
+        const response = await fetch('/api/log/dates');
+        if (response.ok) {
+            const dates = await response.json();
+            const picker = document.getElementById('logDatePicker');
+            picker.innerHTML = '<option value="">Today</option>';
+            dates.forEach(date => {
+                const d = new Date(date + 'T00:00:00');
+                const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                picker.innerHTML += `<option value="${date}">${label}</option>`;
+            });
+        }
+    } catch (error) {
+        console.error('Error loading log dates:', error);
+    }
+}
+
+async function loadLogForDate() {
+    const date = document.getElementById('logDatePicker').value;
+    if (date) {
+        await loadActivityLog(date);
+    } else {
+        await loadActivityLog();
+    }
+}
+
+async function loadActivityLog(date) {
+    const url = date ? `/api/log/date/${date}` : '/api/log';
+    try {
+        const response = await fetch(url);
+        if (response.ok) {
+            allLogEntries = await response.json();
+            filterActivityLog();
+        }
+    } catch (error) {
+        console.error('Error loading activity log:', error);
+        document.getElementById('activityLogList').innerHTML =
+            '<div class="empty-management-state">Error loading activity log</div>';
+    }
+}
+
+function filterActivityLog() {
+    const filter = document.getElementById('logActionFilter').value;
+    let entries = allLogEntries;
+
+    if (filter) {
+        if (filter === 'reset') {
+            entries = entries.filter(e => e.action.startsWith('reset'));
+        } else if (filter === 'admin') {
+            entries = entries.filter(e => e.action.startsWith('admin'));
+        } else {
+            entries = entries.filter(e => e.action === filter);
+        }
+    }
+
+    renderActivityLog(entries);
+}
+
+function renderActivityLog(entries) {
+    const container = document.getElementById('activityLogList');
+
+    if (!entries || entries.length === 0) {
+        container.innerHTML = '<div class="empty-management-state">No activity recorded for this period</div>';
+        return;
+    }
+
+    const actionIcons = {
+        vehicle_arrived: '✅', vehicle_absent: '❌', vehicle_reset: '🔄',
+        'vehicle_not-arrived': '🔄', vehicle_partial: '⏳',
+        student_arrived: '👋', student_absent: '❌', student_reset: '🔄',
+        vehicle_added: '➕', vehicle_deleted: '🗑️', vehicle_edited: '✏️',
+        reset_all: '🔄', reset_afternoon: '🌅', reset_day: '🌙',
+        admin_login: '🔐'
+    };
+
+    const html = entries.map(entry => {
+        const time = new Date(entry.timestamp).toLocaleTimeString('en-US', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        const icon = actionIcons[entry.action] || '📝';
+        const actionLabel = entry.action.replace(/_/g, ' ').replace(/-/g, ' ');
+
+        return `<div class="log-entry log-${entry.action.split('_')[0]}">
+            <span class="log-icon">${icon}</span>
+            <span class="log-time">${time}</span>
+            <span class="log-action">${actionLabel}</span>
+            <span class="log-detail">${entry.details}</span>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+async function loadInsights() {
+    const days = document.getElementById('insightsDays').value || 14;
+    const listEl = document.getElementById('insightsList');
+    const summaryEl = document.getElementById('insightsSummary');
+
+    listEl.innerHTML = '<div class="empty-management-state">Analyzing patterns...</div>';
+    summaryEl.innerHTML = '';
+
+    try {
+        const response = await fetch(`/api/log/insights?days=${days}`);
+        if (response.ok) {
+            const data = await response.json();
+            summaryEl.innerHTML = `<div class="insights-summary-text">${data.summary}</div>`;
+
+            if (!data.insights || data.insights.length === 0) {
+                listEl.innerHTML = '<div class="empty-management-state">Not enough data yet for insights. Keep using the app and check back in a few days!</div>';
+                return;
+            }
+
+            listEl.innerHTML = data.insights.map(insight => `
+                <div class="insight-card insight-${insight.type}">
+                    <span class="insight-icon">${insight.icon}</span>
+                    <div class="insight-body">
+                        <div class="insight-title">${insight.title}</div>
+                        <div class="insight-detail">${insight.detail}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        listEl.innerHTML = '<div class="empty-management-state">Error loading insights</div>';
+    }
 }
 
 // Vehicle Edit Modal Functions
@@ -1119,34 +1422,25 @@ function switchMainTab(mainTab) {
     });
     
     // Add active class to selected main tab and content
-    event.target.classList.add('active');
+    const targetBtn = document.querySelector(`.main-tab[onclick*="${mainTab}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
     document.getElementById(`${mainTab}-content`).classList.add('active');
-    document.getElementById(`${mainTab}-subtabs`).classList.add('active');
+    const subtabs = document.getElementById(`${mainTab}-subtabs`);
+    if (subtabs) subtabs.classList.add('active');
     
     // Activate the first sub-tab by default
     if (mainTab === 'vehicles') {
-        // Reset all vehicle sub-tabs first
         document.querySelectorAll('#vehicles-subtabs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('#vehicles-content .sub-content').forEach(content => content.classList.remove('active'));
-        // Activate first sub-tab
         document.querySelector('#vehicles-subtabs .sub-tab-btn').classList.add('active');
         document.getElementById('vehicles-current').classList.add('active');
         loadVehicleManagementList();
     } else if (mainTab === 'students') {
-        // Reset all student sub-tabs first
         document.querySelectorAll('#students-subtabs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('#students-content .sub-content').forEach(content => content.classList.remove('active'));
-        // Activate first sub-tab
         document.querySelector('#students-subtabs .sub-tab-btn').classList.add('active');
         document.getElementById('students-current').classList.add('active');
         loadStudentManagementList();
-    } else if (mainTab === 'settings') {
-        // Reset all settings sub-tabs first
-        document.querySelectorAll('#settings-subtabs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('#settings-content .sub-content').forEach(content => content.classList.remove('active'));
-        // Activate first sub-tab
-        document.querySelector('#settings-subtabs .sub-tab-btn').classList.add('active');
-        document.getElementById('settings-general').classList.add('active');
     }
 }
 
@@ -1161,8 +1455,7 @@ function switchSubTab(mainTab, subTab) {
     mainContent.querySelectorAll('.sub-content').forEach(content => content.classList.remove('active'));
     
     // Add active class to selected sub-tab and content
-    // Handle both programmatic calls (no event) and button clicks (with event)
-    const targetButton = event && event.target ? event.target : document.querySelector(`#${mainTab}-subtabs button[onclick*="${subTab}"]`);
+    const targetButton = document.querySelector(`#${mainTab}-subtabs button[onclick*="${subTab}"]`);
     if (targetButton) {
         targetButton.classList.add('active');
     }
@@ -1429,17 +1722,18 @@ async function processBulkStudents() {
     
     try {
         // Create a new taxi for these students
-        const nextTaxiNumber = Math.max(...allVehicles
-            .filter(v => v.type === 'Taxi')
-            .map(v => v.number), 100) + 1;
+        const taxiNumbers = allVehicles
+            .filter(v => v.type === 'taxi')
+            .map(v => parseInt(v.number) || 0);
+        const nextTaxiNumber = taxiNumbers.length > 0 ? Math.max(...taxiNumbers) + 1 : 101;
         
         const newVehicle = {
-            type: 'Taxi',
+            type: 'taxi',
             number: nextTaxiNumber,
             students: studentNames.map(name => ({
                 name,
                 pathway: defaultPathway || 'Unassigned',
-                status: 'Not Arrived'
+                status: 'not-arrived'
             }))
         };
         
