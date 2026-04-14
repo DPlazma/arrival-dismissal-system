@@ -83,9 +83,13 @@
                 <div class="selection-count">No vehicles selected</div>
             </div>
             <div class="selection-actions">
-                <button class="btn btn-success" id="confirmChangesBtn" onclick="confirmSelectedChanges()" disabled>
-                    <span class="btn-icon">✓</span>
-                    Confirm Changes
+                <button class="btn btn-success" id="batchArrivedBtn" onclick="batchSetStatus('arrived')" disabled>
+                    <span class="btn-icon">✅</span>
+                    Arrived
+                </button>
+                <button class="btn btn-warning" id="batchAbsentBtn" onclick="batchSetStatus('absent')" disabled>
+                    <span class="btn-icon">🚫</span>
+                    Absent
                 </button>
                 <button class="btn btn-secondary" onclick="clearSelection()">
                     <span class="btn-icon">✕</span>
@@ -606,6 +610,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Vehicle Context Menu -->
+    <div class="vehicle-context-menu hidden" id="vehicleContextMenu" role="menu"></div>
 
     <script src="admin-new-script.js"></script>
 </body>

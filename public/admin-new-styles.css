@@ -373,6 +373,18 @@ body {
     box-shadow: 0 8px 30px rgba(245, 158, 11, 0.4);
 }
 
+.btn-success:disabled,
+.btn-warning:disabled,
+.btn-secondary:disabled {
+    background: #9ca3af;
+    color: #e5e7eb;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+    border-color: transparent;
+    opacity: 0.7;
+}
+
 .btn-icon {
     font-size: 1.1rem;
 }
@@ -590,6 +602,98 @@ body {
 
 .note-btn.clear:hover {
     background: rgba(239, 68, 68, 0.15);
+}
+
+/* Vehicle Context Menu */
+.vehicle-context-menu {
+    position: fixed;
+    z-index: 10000;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+    min-width: 200px;
+    padding: 0.35rem 0;
+    overflow: hidden;
+    backdrop-filter: none;
+}
+
+.vehicle-context-menu.hidden {
+    display: none;
+}
+
+.ctx-menu-header {
+    padding: 0.5rem 0.85rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ctx-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    border: none;
+    background: transparent;
+    font-size: 0.82rem;
+    color: var(--text-color);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+    font-family: inherit;
+}
+
+.ctx-menu-item:hover {
+    background: var(--primary-light);
+}
+
+.ctx-menu-item.active {
+    background: rgba(245, 158, 11, 0.12);
+    font-weight: 600;
+}
+
+.ctx-menu-item.ctx-clear {
+    color: var(--error-color);
+}
+
+.ctx-menu-item.ctx-clear:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.ctx-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0.25rem 0;
+}
+
+.dark-mode .vehicle-context-menu {
+    background: #1e293b;
+    border-color: #475569;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode .ctx-menu-header {
+    color: #f1f5f9;
+    border-bottom-color: #475569;
+}
+
+.dark-mode .ctx-menu-item {
+    color: #e2e8f0;
+}
+
+.dark-mode .ctx-menu-item:hover {
+    background: rgba(96, 165, 250, 0.15);
+}
+
+.dark-mode .ctx-menu-divider {
+    background: #475569;
 }
 
 .taxi-admin-card.arrived {

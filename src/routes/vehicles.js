@@ -110,6 +110,71 @@ router.post('/:id/students/:studentIndex/toggle', requireAuth, async (req, res) 
     res.json({ message: `${student.name} marked as ${student.status.replace('-', ' ')}`, vehicle });
 });
 
+// Set individual student status directly
+router.post('/:id/students/:studentIndex/status', requireAuth, async (req, res) => {
+    const vehicleId = parseInt(req.params.id);
+    const studentIndex = parseInt(req.params.studentIndex);
+    const { status } = req.body;
+    const validStatuses = ['arrived', 'absent', 'not-arrived'];
+
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Must be: arrived, absent, or not-arrived' });
+    }
+
+    const vehicle = getVehicles().find(v => v.id === vehicleId);
+    if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+    if (vehicle.type === 'bus') return res.status(400).json({ error: 'Cannot set individual student status for buses' });
+    if (studentIndex < 0 || studentIndex >= vehicle.students.length) return res.status(404).json({ error: 'Student not found' });
+
+    const student = vehicle.students[studentIndex];
+    student.status = status;
+
+    updateTaxiStatus(vehicle);
+    vehicle.lastModified = new Date().toISOString();
+    await saveVehiclesData();
+
+    logActivity(`student_${status === 'arrived' ? 'arrived' : status === 'absent' ? 'absent' : 'reset'}`,
+        `${student.name} (${vehicle.type} ${vehicle.number}) marked as ${status.replace('-', ' ')}`,
+        { vehicleType: vehicle.type, vehicleName: vehicle.number, studentName: student.name });
+    res.json({ message: `${student.name} marked as ${status.replace('-', ' ')}`, vehicle });
+});
+
+// Set vehicle status directly (arrived, absent, not-arrived)
+router.post('/:id/status', requireAuth, async (req, res) => {
+    const vehicleId = parseInt(req.params.id);
+    const { status } = req.body;
+    const validStatuses = ['arrived', 'absent', 'not-arrived'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Must be: arrived, absent, or not-arrived' });
+    }
+
+    const vehicles = getVehicles();
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
+
+    vehicle.status = status;
+    if (status === 'arrived') {
+        vehicle.arrivalTime = vehicle.arrivalTime || new Date().toISOString();
+    } else {
+        vehicle.arrivalTime = null;
+    }
+
+    // For taxis, also set all students to match
+    if (vehicle.type !== 'bus' && vehicle.type !== 'adhoc') {
+        vehicle.students.forEach(s => { s.status = status; });
+    }
+
+    vehicle.lastModified = new Date().toISOString();
+    await saveVehiclesData();
+
+    const displayName = vehicle.type === 'bus' ? `Bus ${vehicle.number}` :
+                        vehicle.type === 'adhoc' ? vehicle.description :
+                        vehicle.description || `${vehicle.type} ${vehicle.number}`;
+    logActivity(`vehicle_${status === 'arrived' ? 'arrived' : status === 'absent' ? 'absent' : 'reset'}`,
+        `${displayName} marked as ${status.replace('-', ' ')}`, { vehicleType: vehicle.type, vehicleName: vehicle.number });
+    res.json({ message: `${displayName} marked as ${status.replace('-', ' ')}`, vehicle });
+});
+
 // Set vehicle note (e.g., "2nd call")
 router.post('/:id/note', requireAuth, async (req, res) => {
     const vehicleId = parseInt(req.params.id);
@@ -133,6 +198,78 @@ router.post('/:id/note', requireAuth, async (req, res) => {
         logActivity('vehicle_note', `${displayName}: "${vehicle.note}"`, { vehicleType: vehicle.type, vehicleName: vehicle.number });
     }
     res.json({ message: vehicle.note ? `Note set on ${displayName}` : `Note cleared on ${displayName}`, vehicle });
+});
+
+// Batch set status (arrived or absent)
+router.post('/batch-status', requireAuth, async (req, res) => {
+    const { vehicleIds = [], studentSelections = {}, status } = req.body;
+    const validStatuses = ['arrived', 'absent', 'not-arrived'];
+    const hasVehicles = Array.isArray(vehicleIds) && vehicleIds.length > 0;
+    const hasStudents = Object.keys(studentSelections).length > 0;
+
+    if (!hasVehicles && !hasStudents) {
+        return res.status(400).json({ error: 'No vehicles or students specified' });
+    }
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const vehicles = getVehicles();
+    let updated = 0;
+    let studentsUpdated = 0;
+
+    // Handle whole-vehicle status changes
+    for (const vehicleId of vehicleIds) {
+        const vehicle = vehicles.find(v => v.id === parseInt(vehicleId));
+        if (!vehicle) continue;
+
+        vehicle.status = status;
+        if (status === 'arrived') {
+            vehicle.arrivalTime = vehicle.arrivalTime || new Date().toISOString();
+        } else {
+            vehicle.arrivalTime = null;
+        }
+
+        if (vehicle.type !== 'bus' && vehicle.type !== 'adhoc') {
+            vehicle.students.forEach(s => { s.status = status; });
+        }
+
+        vehicle.lastModified = new Date().toISOString();
+        updated++;
+
+        const displayName = vehicle.type === 'bus' ? `Bus ${vehicle.number}` :
+                            vehicle.type === 'adhoc' ? vehicle.description :
+                            vehicle.description || `${vehicle.type} ${vehicle.number}`;
+        logActivity(`vehicle_${status === 'arrived' ? 'arrived' : status === 'absent' ? 'absent' : 'reset'}`,
+            `${displayName} marked as ${status.replace('-', ' ')}`, { vehicleType: vehicle.type, vehicleName: vehicle.number });
+    }
+
+    // Handle per-student status changes (partial selections)
+    for (const [vehicleId, indices] of Object.entries(studentSelections)) {
+        const vehicle = vehicles.find(v => v.id === parseInt(vehicleId));
+        if (!vehicle || !Array.isArray(indices)) continue;
+
+        for (const idx of indices) {
+            if (idx >= 0 && idx < vehicle.students.length) {
+                vehicle.students[idx].status = status;
+                studentsUpdated++;
+
+                logActivity(`student_${status === 'arrived' ? 'arrived' : status === 'absent' ? 'absent' : 'reset'}`,
+                    `${vehicle.students[idx].name} (${vehicle.type} ${vehicle.number}) marked as ${status.replace('-', ' ')}`,
+                    { vehicleType: vehicle.type, vehicleName: vehicle.number, studentName: vehicle.students[idx].name });
+            }
+        }
+
+        // Recalculate vehicle status from student statuses
+        updateTaxiStatus(vehicle);
+        vehicle.lastModified = new Date().toISOString();
+    }
+
+    await saveVehiclesData();
+    const parts = [];
+    if (updated > 0) parts.push(`${updated} vehicle${updated !== 1 ? 's' : ''}`);
+    if (studentsUpdated > 0) parts.push(`${studentsUpdated} student${studentsUpdated !== 1 ? 's' : ''}`);
+    res.json({ message: `${parts.join(' and ')} marked as ${status.replace('-', ' ')}`, updated, studentsUpdated });
 });
 
 // Batch toggle

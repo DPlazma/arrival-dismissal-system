@@ -1,4 +1,4 @@
-const CACHE_VERSION = '10';
+const CACHE_VERSION = '17';
 const CACHE_NAME = `arrival-dismissal-v${CACHE_VERSION}`;
 const urlsToCache = [
   '/',

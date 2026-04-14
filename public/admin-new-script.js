@@ -498,8 +498,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    // Auto-refresh every 30 seconds
-    setInterval(loadAllVehicles, 30000);
+    // Connect SSE for real-time sync with other admin sessions
+    connectAdminSSE();
+
+    // Fallback polling every 60 seconds (in case SSE disconnects)
+    setInterval(loadAllVehicles, 60000);
 });
 
 // Update current time display
@@ -514,6 +517,45 @@ function updateCurrentTime() {
     });
     
     document.getElementById('currentTime').textContent = timeString;
+}
+
+// SSE: real-time sync between multiple admin sessions
+let adminSSE = null;
+function connectAdminSSE() {
+    if (adminSSE) adminSSE.close();
+    adminSSE = new EventSource('/api/events');
+
+    adminSSE.addEventListener('vehicles', (event) => {
+        try {
+            const newVehicles = JSON.parse(event.data);
+            allVehicles = newVehicles;
+            filteredVehicles = [...allVehicles];
+            applySorting();
+            displayVehicles();
+            updateStats();
+            applyFilters();
+            updateSelectionSummary();
+        } catch (e) {
+            console.error('Admin SSE parse error:', e);
+        }
+    });
+
+    adminSSE.addEventListener('settings', (event) => {
+        try {
+            const settings = JSON.parse(event.data);
+            if (settings.theme) applyAdminTheme(settings.theme);
+            if (settings.darkMode !== undefined) {
+                document.body.classList.toggle('dark-mode', settings.darkMode);
+            }
+        } catch (e) {
+            console.error('Admin SSE settings parse error:', e);
+        }
+    });
+
+    adminSSE.onerror = () => {
+        adminSSE.close();
+        setTimeout(connectAdminSSE, 3000);
+    };
 }
 
 // Load all vehicles from API
@@ -649,11 +691,6 @@ function displayTaxis() {
                     `}).join('')}
                 </div>
                 
-                <div class="vehicle-note-actions" onclick="event.stopPropagation()">
-                    <button class="note-btn ${taxi.note === '2nd Call' ? 'active' : ''}" onclick="setVehicleNote(${taxi.id}, '2nd Call')" title="Mark as 2nd call">📞 2nd Call</button>
-                    ${taxi.note ? `<button class="note-btn clear" onclick="setVehicleNote(${taxi.id}, '')" title="Clear note">✕</button>` : ''}
-                </div>
-                
                 ${taxi.arrivalTime ? `<div style="font-size: 0.8rem; color: #666; text-align: center; margin-top: 0.5rem;">
                     First arrival: ${formatTime(taxi.arrivalTime)}
                 </div>` : ''}
@@ -666,6 +703,7 @@ function displayTaxis() {
 function displayVehicles() {
     displayBuses();
     displayTaxis();
+    attachContextMenuListeners();
 }
 
 // Toggle bus status (cycles: not-arrived -> arrived -> absent -> not-arrived)
@@ -743,6 +781,204 @@ async function setVehicleNote(vehicleId, note) {
     }
 }
 
+// --- Vehicle Context Menu ---
+let contextMenuVehicleId = null;
+let contextMenuStudentIndex = null;
+let longPressTimer = null;
+
+function showVehicleContextMenu(vehicleId, x, y) {
+    const vehicle = allVehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return;
+    contextMenuVehicleId = vehicleId;
+
+    const isBus = vehicle.type === 'bus' || vehicle.type === 'adhoc';
+    const menu = document.getElementById('vehicleContextMenu');
+    const displayName = vehicle.type === 'bus' ? `Bus ${vehicle.number}` :
+                        vehicle.type === 'adhoc' ? vehicle.description :
+                        vehicle.description || `Taxi ${vehicle.number}`;
+
+    let items = `<div class="ctx-menu-header">${escapeHtml(displayName)}</div>`;
+
+    // Status actions
+    if (vehicle.status !== 'arrived') {
+        items += `<button class="ctx-menu-item" onclick="ctxSetStatus('arrived')">✅ Mark Arrived</button>`;
+    }
+    if (vehicle.status !== 'not-arrived') {
+        items += `<button class="ctx-menu-item" onclick="ctxSetStatus('not-arrived')">⬜ Mark Not Arrived</button>`;
+    }
+    if (vehicle.status !== 'absent') {
+        items += `<button class="ctx-menu-item" onclick="ctxSetStatus('absent')">🚫 Mark Absent</button>`;
+    }
+
+    items += `<div class="ctx-menu-divider"></div>`;
+
+    // Note actions
+    items += `<button class="ctx-menu-item ${vehicle.note === '2nd Call' ? 'active' : ''}" onclick="ctxSetNote('2nd Call')">📞 2nd Call</button>`;
+    items += `<button class="ctx-menu-item ${vehicle.note === 'Running Late' ? 'active' : ''}" onclick="ctxSetNote('Running Late')">⏰ Running Late</button>`;
+
+    if (vehicle.note) {
+        items += `<div class="ctx-menu-divider"></div>`;
+        items += `<button class="ctx-menu-item ctx-clear" onclick="ctxSetNote('')">✕ Clear Note</button>`;
+    }
+
+    menu.innerHTML = items;
+    menu.classList.remove('hidden');
+
+    // Stop clicks inside the menu from triggering the global close handler
+    menu.onclick = (e) => e.stopPropagation();
+
+    // Position: keep within viewport
+    requestAnimationFrame(() => {
+        const rect = menu.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        menu.style.left = Math.min(x, vw - rect.width - 8) + 'px';
+        menu.style.top = Math.min(y, vh - rect.height - 8) + 'px';
+    });
+}
+
+function hideContextMenu() {
+    const menu = document.getElementById('vehicleContextMenu');
+    if (menu) {
+        menu.classList.add('hidden');
+        contextMenuVehicleId = null;
+        contextMenuStudentIndex = null;
+    }
+}
+
+function showStudentContextMenu(vehicleId, studentIndex, x, y) {
+    const vehicle = allVehicles.find(v => v.id === vehicleId);
+    if (!vehicle || !vehicle.students[studentIndex]) return;
+    contextMenuVehicleId = vehicleId;
+    contextMenuStudentIndex = studentIndex;
+
+    const student = vehicle.students[studentIndex];
+    const menu = document.getElementById('vehicleContextMenu');
+
+    let items = `<div class="ctx-menu-header">${escapeHtml(student.name)}</div>`;
+
+    if (student.status !== 'arrived') {
+        items += `<button class="ctx-menu-item" onclick="ctxSetStatus('arrived')">✅ Mark Arrived</button>`;
+    }
+    if (student.status !== 'not-arrived') {
+        items += `<button class="ctx-menu-item" onclick="ctxSetStatus('not-arrived')">⬜ Mark Not Arrived</button>`;
+    }
+    if (student.status !== 'absent') {
+        items += `<button class="ctx-menu-item" onclick="ctxSetStatus('absent')">🚫 Mark Absent</button>`;
+    }
+
+    menu.innerHTML = items;
+    menu.classList.remove('hidden');
+    menu.onclick = (e) => e.stopPropagation();
+
+    requestAnimationFrame(() => {
+        const rect = menu.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        menu.style.left = Math.min(x, vw - rect.width - 8) + 'px';
+        menu.style.top = Math.min(y, vh - rect.height - 8) + 'px';
+    });
+}
+
+async function ctxSetStatus(status) {
+    const vehicleId = contextMenuVehicleId;
+    const studentIndex = contextMenuStudentIndex;
+    hideContextMenu();
+    if (!vehicleId) return;
+
+    // If a student was targeted, update just that student
+    const url = studentIndex !== null
+        ? `/api/vehicles/${vehicleId}/students/${studentIndex}/status`
+        : `/api/vehicles/${vehicleId}/status`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (response.ok) {
+            const result = await response.json();
+            showToast(result.message, 'success');
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to set status', 'error');
+        }
+    } catch (error) {
+        showToast('Error setting status', 'error');
+    }
+}
+
+async function ctxSetNote(note) {
+    const vehicleId = contextMenuVehicleId;
+    hideContextMenu();
+    if (!vehicleId) return;
+    await setVehicleNote(vehicleId, note);
+}
+
+// Attach context menu listeners (called after cards are rendered)
+function attachContextMenuListeners() {
+    const cards = document.querySelectorAll('.bus-admin-card, .taxi-admin-card');
+    cards.forEach(card => {
+        const vehicleId = parseInt(card.dataset.vehicleId);
+        if (!vehicleId) return;
+
+        // Right-click
+        card.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showVehicleContextMenu(vehicleId, e.clientX, e.clientY);
+        });
+
+        // Long-press (touch)
+        card.addEventListener('touchstart', (e) => {
+            longPressTimer = setTimeout(() => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                showVehicleContextMenu(vehicleId, touch.clientX, touch.clientY);
+            }, 500);
+        }, { passive: false });
+
+        card.addEventListener('touchend', () => clearTimeout(longPressTimer));
+        card.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+    });
+
+    // Student-level context menus
+    const studentItems = document.querySelectorAll('.student-item');
+    studentItems.forEach(item => {
+        const card = item.closest('.taxi-admin-card');
+        if (!card) return;
+        const vehicleId = parseInt(card.dataset.vehicleId);
+        const siblings = Array.from(card.querySelectorAll('.student-item'));
+        const studentIndex = siblings.indexOf(item);
+        if (!vehicleId || studentIndex < 0) return;
+
+        item.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showStudentContextMenu(vehicleId, studentIndex, e.clientX, e.clientY);
+        });
+
+        let studentLongPress = null;
+        item.addEventListener('touchstart', (e) => {
+            studentLongPress = setTimeout(() => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                showStudentContextMenu(vehicleId, studentIndex, touch.clientX, touch.clientY);
+            }, 500);
+        }, { passive: false });
+        item.addEventListener('touchend', () => clearTimeout(studentLongPress));
+        item.addEventListener('touchmove', () => clearTimeout(studentLongPress));
+    });
+}
+
+// Close context menu when clicking elsewhere
+document.addEventListener('click', hideContextMenu);
+document.addEventListener('touchstart', (e) => {
+    const menu = document.getElementById('vehicleContextMenu');
+    if (menu && !menu.contains(e.target)) hideContextMenu();
+});
+
 // Toggle vehicle selection for batch operations
 function toggleVehicleSelection(vehicleId) {
     const vehicle = allVehicles.find(v => v.id === vehicleId);
@@ -810,11 +1046,17 @@ function updateSelectionSummary() {
     
     const totalSelections = vehicleCount + studentCount;
     const summaryElement = document.getElementById('selectionSummary');
-    const confirmBtn = document.getElementById('confirmChangesBtn');
+    const arrivedBtn = document.getElementById('batchArrivedBtn');
+    const absentBtn = document.getElementById('batchAbsentBtn');
     
     if (totalSelections === 0) {
         summaryElement.innerHTML = '<div class="selection-count">No vehicles or students selected</div>';
-        confirmBtn.disabled = true;
+        arrivedBtn.disabled = true;
+        absentBtn.disabled = true;
+        // Reset to default label
+        arrivedBtn.textContent = '✅ Arrived';
+        arrivedBtn.onclick = () => batchSetStatus('arrived');
+        arrivedBtn.className = 'btn btn-success';
     } else {
         // Build selection summary text
         let selectionParts = [];
@@ -856,86 +1098,84 @@ function updateSelectionSummary() {
         
         summaryElement.innerHTML = `<div class="selection-count">${mainCountText} selected</div>
                                    ${summaryText ? `<div style="font-size: 0.9rem; color: var(--secondary-text-color); margin-top: 0.5rem;">${summaryText}</div>` : ''}`;
-        confirmBtn.disabled = false;
+        arrivedBtn.disabled = false;
+        absentBtn.disabled = false;
+
+        // Smart toggle: if ALL selected vehicles are already arrived, flip to "Not Arrived"
+        const allArrived = [...allSelectedVehicleIds].every(id => {
+            const v = allVehicles.find(veh => veh.id === id);
+            return v && v.status === 'arrived';
+        });
+
+        if (allArrived) {
+            arrivedBtn.textContent = '⬜ Not Arrived';
+            arrivedBtn.onclick = () => batchSetStatus('not-arrived');
+            arrivedBtn.className = 'btn btn-secondary';
+        } else {
+            arrivedBtn.textContent = '✅ Arrived';
+            arrivedBtn.onclick = () => batchSetStatus('arrived');
+            arrivedBtn.className = 'btn btn-success';
+        }
     }
 }
 
-// Confirm selected changes
-async function confirmSelectedChanges() {
-    const totalSelections = selectedVehicles.size + Array.from(selectedStudents.values()).reduce((sum, set) => sum + set.size, 0);
-    if (totalSelections === 0) return;
-    
-    const confirmBtn = document.getElementById('confirmChangesBtn');
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<span class=\"btn-icon\">⏳</span> Processing...';
-    
-    try {
-        let successCount = 0;
-        let errorCount = 0;
-        
-        // Get all vehicles that should be processed (explicitly selected OR have students selected)
-        const explicitlySelectedVehicles = new Set(selectedVehicles);
-        const vehiclesWithStudents = new Set(selectedStudents.keys());
-        const allVehiclesToProcess = new Set([...explicitlySelectedVehicles, ...vehiclesWithStudents]);
-        
-        // Process selected vehicles
-        if (allVehiclesToProcess.size > 0) {
-            const response = await fetch('/api/vehicles/batch-toggle', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    vehicleIds: Array.from(allVehiclesToProcess)
-                })
-            });
-            
-            if (response.ok) {
-                successCount += allVehiclesToProcess.size;
+// Batch set status for selected vehicles
+async function batchSetStatus(status) {
+    const allSelectedVehicleIds = new Set([...selectedVehicles, ...selectedStudents.keys()]);
+    if (allSelectedVehicleIds.size === 0) return;
+
+    const arrivedBtn = document.getElementById('batchArrivedBtn');
+    const absentBtn = document.getElementById('batchAbsentBtn');
+    arrivedBtn.disabled = true;
+    absentBtn.disabled = true;
+
+    // Separate whole-vehicle selections from partial-student selections
+    const wholeVehicleIds = [];
+    const studentSelections = {};
+
+    for (const vehicleId of allSelectedVehicleIds) {
+        if (selectedVehicles.has(vehicleId)) {
+            // Whole vehicle selected
+            wholeVehicleIds.push(vehicleId);
+        } else if (selectedStudents.has(vehicleId)) {
+            // Only specific students selected
+            const vehicle = allVehicles.find(v => v.id === vehicleId);
+            const selectedIndices = selectedStudents.get(vehicleId);
+            if (vehicle && selectedIndices.size > 0 && selectedIndices.size < vehicle.students.length) {
+                studentSelections[vehicleId] = Array.from(selectedIndices);
             } else {
-                errorCount += allVehiclesToProcess.size;
+                // All students selected = whole vehicle
+                wholeVehicleIds.push(vehicleId);
             }
         }
-        
-        // Process selected students
-        for (const [vehicleId, studentIndices] of selectedStudents.entries()) {
-            for (const studentIndex of studentIndices) {
-                try {
-                    const response = await fetch(`/api/vehicles/${vehicleId}/students/${studentIndex}/toggle`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        successCount++;
-                    } else {
-                        errorCount++;
-                    }
-                } catch (error) {
-                    errorCount++;
-                    console.error('Error updating student:', error);
-                }
-            }
+    }
+
+    try {
+        const response = await fetch('/api/vehicles/batch-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vehicleIds: wholeVehicleIds,
+                studentSelections,
+                status
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showToast(result.message, 'success');
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to update', 'error');
         }
-        
-        // Clear selections and refresh
+
         selectedVehicles.clear();
         selectedStudents.clear();
         updateSelectionSummary();
         await loadAllVehicles();
-        
-        if (errorCount === 0) {
-            showToast(`Successfully updated ${successCount} item${successCount !== 1 ? 's' : ''}`, 'success');
-        } else {
-            showToast(`Updated ${successCount} item${successCount !== 1 ? 's' : ''}, ${errorCount} error${errorCount !== 1 ? 's' : ''}`, 'error');
-        }
     } catch (error) {
-        console.error('Error confirming changes:', error);
+        console.error('Error batch setting status:', error);
         showToast('Error updating selections', 'error');
-    } finally {
-        confirmBtn.innerHTML = '<span class="btn-icon">✓</span> Confirm Changes';
         updateSelectionSummary();
     }
 }
