@@ -40,9 +40,56 @@ function speakArrival(vehicleName) {
     speechSynthesis.speak(utterance);
 }
 
+function getSelectedVehicleTypes() {
+    return Array.from(document.querySelectorAll('[data-vehicle-type-filter]'))
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+}
+
+function getAllVehicleTypeOptions() {
+    return Array.from(document.querySelectorAll('[data-vehicle-type-filter]'))
+        .map(cb => cb.value);
+}
+
+function isVehicleTypeFilterActive(selectedTypes) {
+    const allTypes = getAllVehicleTypeOptions();
+    return selectedTypes.length > 0 && selectedTypes.length < allTypes.length;
+}
+
+function vehicleMatchesTypeFilter(vehicleType, selectedTypes) {
+    if (!isVehicleTypeFilterActive(selectedTypes)) {
+        return true;
+    }
+    if (vehicleType === 'adhoc') {
+        return selectedTypes.includes('taxi');
+    }
+    return selectedTypes.includes(vehicleType);
+}
+
+function restoreVehicleTypeFilters() {
+    const checkboxes = document.querySelectorAll('[data-vehicle-type-filter]');
+    const savedMulti = localStorage.getItem('vehicleTypeFilterMulti');
+    const savedLegacy = localStorage.getItem('vehicleTypeFilter');
+
+    if (savedMulti !== null) {
+        const types = JSON.parse(savedMulti);
+        checkboxes.forEach(cb => {
+            cb.checked = types.includes(cb.value);
+        });
+    } else if (savedLegacy) {
+        checkboxes.forEach(cb => {
+            cb.checked = cb.value === savedLegacy;
+        });
+    }
+}
+
+function persistVehicleTypeFilters() {
+    localStorage.setItem('vehicleTypeFilterMulti', JSON.stringify(getSelectedVehicleTypes()));
+}
+
 function detectArrivals(newVehicles) {
     // Read active filters so alerts only fire for visible vehicles
-    const vehicleTypeFilter = document.getElementById('vehicleTypeFilter')?.value || '';
+    const selectedTypes = getSelectedVehicleTypes();
     const pathwayFilter = document.getElementById('pathwayFilter')?.value || '';
 
     const arrivals = [];
@@ -51,11 +98,8 @@ function detectArrivals(newVehicles) {
         if (prevStatus && prevStatus !== 'arrived' && vehicle.status === 'arrived') {
             const isBus = vehicle.type === 'bus';
 
-            // Vehicle type filter: skip vehicles that wouldn't be shown
-            if (vehicleTypeFilter) {
-                if (isBus && vehicleTypeFilter !== 'bus') continue;
-                if (!isBus && vehicleTypeFilter === 'bus') continue;
-                if (!isBus && vehicle.type !== vehicleTypeFilter) continue;
+            if (!vehicleMatchesTypeFilter(vehicle.type, selectedTypes)) {
+                continue;
             }
 
             // Pathway filter: skip taxis that don't carry a student on the selected pathway
@@ -285,7 +329,21 @@ function updateDisplayPathwayLabels() {
 }
 
 // Initialize the application
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+                console.log('ServiceWorker registration successful:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('ServiceWorker registration failed:', error);
+            });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
+    registerServiceWorker();
+
     // Setup side menu
     setupSideMenu();
     
@@ -300,19 +358,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadAllVehicles();
     
     // Set up filter functionality
-    const vehicleTypeFilter = document.getElementById('vehicleTypeFilter');
     const pathwayFilter = document.getElementById('pathwayFilter');
     const arrivedOnlyFilter = document.getElementById('arrivedOnlyFilter');
+    const vehicleTypeCheckboxes = document.querySelectorAll('[data-vehicle-type-filter]');
     
     // Restore saved filter preferences
-    const savedVehicleType = localStorage.getItem('vehicleTypeFilter');
+    restoreVehicleTypeFilters();
     const savedPathway = localStorage.getItem('pathwayFilter');
     const savedArrivedOnly = localStorage.getItem('arrivedOnlyFilter');
-    if (savedVehicleType !== null) vehicleTypeFilter.value = savedVehicleType;
     if (savedPathway !== null) pathwayFilter.value = savedPathway;
     if (savedArrivedOnly !== null) arrivedOnlyFilter.checked = savedArrivedOnly === 'true';
     
-    vehicleTypeFilter.addEventListener('change', applyFilters);
+    vehicleTypeCheckboxes.forEach(cb => cb.addEventListener('change', applyFilters));
     pathwayFilter.addEventListener('change', applyFilters);
     arrivedOnlyFilter.addEventListener('change', applyFilters);
     
@@ -382,7 +439,6 @@ async function loadAllVehicles() {
             
             // Display vehicles
             displayBuses();
-            displayTaxis();
             updateStats();
             applyFilters();
         } else {
@@ -407,7 +463,6 @@ function connectSSE() {
             buses = allVehicles.filter(v => v.type === 'bus');
             taxis = allVehicles.filter(v => v.type === 'taxi' || v.type === 'parent' || v.type === 'adhoc');
             displayBuses();
-            displayTaxis();
             updateStats();
             applyFilters();
             showRefreshIndicator();
@@ -484,49 +539,37 @@ function displayBuses() {
     }).join('');
 }
 
-// Display taxis in the main grid
-function displayTaxis() {
+// Render taxis in the main grid
+function renderTaxiGrid(taxiList, emptyState = {}) {
     const taxiGrid = document.getElementById('taxiGrid');
-    const arrivedOnlyFilter = document.getElementById('arrivedOnlyFilter').checked;
+    const {
+        icon = '🔍',
+        title = 'No vehicles match filters',
+        message = 'Try adjusting your filter settings'
+    } = emptyState;
     
-    if (taxis.length === 0) {
+    if (taxiList.length === 0) {
         taxiGrid.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon">🚕</div>
-                <div class="empty-state-title">No taxis/drop-offs configured</div>
-                <div class="empty-state-message">Add vehicles in the admin interface</div>
+                <div class="empty-state-icon">${icon}</div>
+                <div class="empty-state-title">${title}</div>
+                <div class="empty-state-message">${message}</div>
             </div>
         `;
         return;
     }
     
-    // Apply arrived-only filter if enabled
-    let displayTaxis = arrivedOnlyFilter ? taxis.filter(taxi => taxi.status === 'arrived') : taxis;
-    
-    if (displayTaxis.length === 0) {
-        taxiGrid.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🔍</div>
-                <div class="empty-state-title">No arrived taxis to display</div>
-                <div class="empty-state-message">Uncheck "Show Only Arrived Taxis" to see all taxis</div>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort taxis purely by latest modified (most recent first)
-    const sortedTaxis = [...displayTaxis].sort((a, b) => {
-        // Sort by lastModified (most recent first) - no other sorting criteria
+    const sortedTaxis = [...taxiList].sort((a, b) => {
         const aTime = new Date(a.lastModified || 0);
         const bTime = new Date(b.lastModified || 0);
-        return bTime - aTime; // b - a for descending order (newest first)
+        return bTime - aTime;
     });
     
     taxiGrid.innerHTML = sortedTaxis.map(taxi => {
         const statusBadge = getStatusBadge(taxi.status);
         const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : taxi.type === 'adhoc' ? '📝' : '🚕';
-        const vehicleName = taxi.description ? taxi.description : 
-                           (taxi.type === 'parent' ? 'Parent Drop-off' : 
+        const vehicleName = taxi.description ? taxi.description :
+                           (taxi.type === 'parent' ? 'Parent Drop-off' :
                            `Taxi ${taxi.number || 'Unknown'}`);
         
         return `
@@ -588,29 +631,29 @@ function formatTime(timeString) {
 
 // Apply filters
 function applyFilters() {
-    const vehicleTypeFilter = document.getElementById('vehicleTypeFilter').value;
+    const selectedTypes = getSelectedVehicleTypes();
     const pathwayFilter = document.getElementById('pathwayFilter').value;
     const arrivedOnlyFilter = document.getElementById('arrivedOnlyFilter').checked;
     
     // Persist filter preferences
-    localStorage.setItem('vehicleTypeFilter', vehicleTypeFilter);
+    persistVehicleTypeFilters();
     localStorage.setItem('pathwayFilter', pathwayFilter);
     localStorage.setItem('arrivedOnlyFilter', arrivedOnlyFilter);
     
-    // Show/hide bus section
+    // Show/hide sections based on selected types
     const busSection = document.querySelector('.bus-section');
-    if (vehicleTypeFilter === '' || vehicleTypeFilter === 'bus') {
-        busSection.style.display = 'block';
-    } else {
-        busSection.style.display = 'none';
-    }
+    const taxiSection = document.querySelector('.taxi-section');
+    busSection.style.display = selectedTypes.includes('bus') ? 'block' : 'none';
+    taxiSection.style.display = selectedTypes.some(type => ['taxi', 'parent'].includes(type)) ? 'block' : 'none';
     
     // Filter and display taxis
     let filteredTaxis = [...taxis];
     
     // Apply vehicle type filter
-    if (vehicleTypeFilter && vehicleTypeFilter !== 'bus') {
-        filteredTaxis = filteredTaxis.filter(taxi => taxi.type === vehicleTypeFilter);
+    if (isVehicleTypeFilterActive(selectedTypes)) {
+        filteredTaxis = filteredTaxis.filter(taxi => vehicleMatchesTypeFilter(taxi.type, selectedTypes));
+    } else if (selectedTypes.length === 0) {
+        filteredTaxis = [];
     }
     
     // Apply pathway filter
@@ -626,62 +669,21 @@ function applyFilters() {
     }
     
     // Update taxi display with filtered results
-    displayFilteredTaxis(filteredTaxis);
-}
-
-// Display filtered taxis
-function displayFilteredTaxis(filteredTaxis) {
-    const taxiGrid = document.getElementById('taxiGrid');
-    
-    if (filteredTaxis.length === 0) {
-        taxiGrid.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">🔍</div>
-                <div class="empty-state-title">No vehicles match filters</div>
-                <div class="empty-state-message">Try adjusting your filter settings</div>
-            </div>
-        `;
-        return;
+    let emptyState;
+    if (taxis.length === 0) {
+        emptyState = {
+            icon: '🚕',
+            title: 'No taxis/drop-offs configured',
+            message: 'Add vehicles in the admin interface'
+        };
+    } else if (arrivedOnlyFilter && filteredTaxis.length === 0) {
+        emptyState = {
+            icon: '🔍',
+            title: 'No arrived taxis to display',
+            message: 'Uncheck "Show Only Arrived Taxis" to see all taxis'
+        };
     }
-    
-    // Sort taxis purely by latest modified (most recent first)
-    const sortedTaxis = [...filteredTaxis].sort((a, b) => {
-        // Sort by lastModified (most recent first) - no other sorting criteria
-        const aTime = new Date(a.lastModified || 0);
-        const bTime = new Date(b.lastModified || 0);
-        return bTime - aTime; // b - a for descending order (newest first)
-    });
-    
-    taxiGrid.innerHTML = sortedTaxis.map(taxi => {
-        const statusBadge = getStatusBadge(taxi.status);
-        const vehicleTypeIcon = taxi.type === 'parent' ? '🚗' : '🚕';
-        const vehicleName = taxi.type === 'parent' ? 'Parent Drop-off' : `Taxi ${taxi.number}`;
-        
-        return `
-            <div class="taxi-card ${taxi.status} ${taxi.note ? 'has-note' : ''}" data-vehicle-id="${taxi.id}">
-                <div class="taxi-header">
-                    <div class="taxi-name">${vehicleTypeIcon} ${escapeHtml(vehicleName)}</div>
-                    <div class="taxi-status-badge ${taxi.status}">${statusBadge}</div>
-                </div>
-                
-                ${taxi.note ? `<div class="vehicle-note-display">📌 ${escapeHtml(taxi.note)}</div>` : ''}
-                
-                <div class="taxi-students">
-                    ${taxi.students.map(student => `
-                        <div class="student-item">
-                            <div>
-                                <div class="student-name">${escapeHtml(student.name)}</div>
-                                <div class="student-pathway">${escapeHtml(student.pathway)}</div>
-                            </div>
-                            <div class="student-status ${student.status || 'not-arrived'}">${getStatusText(student.status || 'not-arrived')}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                ${taxi.arrivalTime ? `<div class="taxi-arrival-time">Arrived: ${formatTime(taxi.arrivalTime)}</div>` : ''}
-            </div>
-        `;
-    }).join('');
+    renderTaxiGrid(filteredTaxis, emptyState);
 }
 
 // Update statistics display
@@ -767,7 +769,7 @@ async function loadSmartAnnouncements() {
     if (!banner) return;
     
     try {
-        const response = await fetch('/api/log/insights?days=14');
+        const response = await fetch('/api/log/insights/public?days=14');
         if (!response.ok) {
             banner.classList.add('hidden');
             return;

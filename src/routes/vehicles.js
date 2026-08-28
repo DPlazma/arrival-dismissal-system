@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware');
-const { getVehicles, setVehicles, saveVehiclesData, getStudents, saveStudentsData } = require('../data');
+const { getVehicles, setVehicles, saveVehiclesData } = require('../data');
 const { logActivity } = require('../activity-log');
 
 // Helper: update taxi status based on student statuses
@@ -308,7 +308,7 @@ router.post('/batch-toggle', requireAuth, async (req, res) => {
     }
 });
 
-// Add ad-hoc transport
+// Add ad-hoc vehicle
 router.post('/adhoc', requireAuth, async (req, res) => {
     const { description } = req.body;
     if (!description || typeof description !== 'string' || description.trim().length === 0) {
@@ -318,21 +318,26 @@ router.post('/adhoc', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Description must be 50 characters or less' });
     }
 
-    const students = getStudents();
-    const newStudent = {
-        id: Math.max(...students.map(s => s.id), 0) + 1,
-        name: description.trim(),
-        transport: 'Ad-hoc',
-        pathway: 'Special Transport',
-        arrived: true,
-        arrivalTime: new Date().toISOString()
+    const vehicles = getVehicles();
+    const trimmed = description.trim();
+    const now = new Date().toISOString();
+    const newVehicle = {
+        id: Math.max(...vehicles.map(v => v.id), 0) + 1,
+        type: 'adhoc',
+        description: trimmed,
+        number: trimmed,
+        status: 'arrived',
+        arrivalTime: now,
+        lastModified: now,
+        students: []
     };
 
-    students.push(newStudent);
-    await saveStudentsData();
+    vehicles.push(newVehicle);
+    await saveVehiclesData();
 
-    console.log(`Ad-hoc transport added: ${description}`);
-    res.json({ message: `Ad-hoc transport "${description}" added`, student: newStudent });
+    console.log(`Ad-hoc vehicle added: ${trimmed}`);
+    logActivity('vehicle_arrived', `Ad-hoc vehicle "${trimmed}" added`, { vehicleType: 'adhoc', vehicleName: trimmed });
+    res.json({ message: `Ad-hoc vehicle "${trimmed}" added`, vehicle: newVehicle });
 });
 
 // Add new vehicle

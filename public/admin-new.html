@@ -109,13 +109,35 @@
         </div>
         
         <div class="control-group">
-            <label for="vehicleFilter">Filter Vehicles:</label>
-            <select id="vehicleFilter" class="filter-select">
-                <option value="">All Vehicles</option>
-                <option value="bus">Buses Only</option>
-                <option value="taxi">Taxis Only</option>
-                <option value="parent">Parent Drop Only</option>
-                <option value="adhoc">Ad-hoc Only</option>
+            <label>Vehicle Types:</label>
+            <div class="filter-checkboxes" role="group" aria-label="Filter by vehicle type">
+                <label class="checkbox-label">
+                    <input type="checkbox" data-vehicle-type-filter value="bus" checked>
+                    <span class="checkmark"></span>
+                    Buses
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" data-vehicle-type-filter value="taxi" checked>
+                    <span class="checkmark"></span>
+                    Taxis
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" data-vehicle-type-filter value="parent" checked>
+                    <span class="checkmark"></span>
+                    Parent Drop-offs
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" data-vehicle-type-filter value="adhoc" checked>
+                    <span class="checkmark"></span>
+                    Ad-hoc
+                </label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="statusFilter">Filter by Status:</label>
+            <select id="statusFilter" class="filter-select">
+                <option value="">All Statuses</option>
                 <option value="arrived">Arrived</option>
                 <option value="partial">Partial</option>
                 <option value="not-arrived">Not Arrived</option>
@@ -152,7 +174,7 @@
     <!-- Bus Section -->
     <section class="bus-admin-section" aria-label="School buses">
         <h2 class="section-title">🚌 School Buses</h2>
-        <p class="section-description">Click buses to toggle: Not Arrived → Arrived → Absent</p>
+        <p class="section-description">Tap to select for batch actions. Right-click or long-press to change status.</p>
         <div class="bus-admin-grid" id="busAdminGrid" role="list" aria-live="polite">
             <!-- Buses will be populated here -->
         </div>
@@ -161,7 +183,7 @@
     <!-- Taxi Section -->
     <section class="taxi-admin-section" aria-label="Taxis and parent drop-offs">
         <h2 class="section-title">🚕 Taxis & Parent Drop-offs</h2>
-        <p class="section-description">Click individual students to toggle their status</p>
+        <p class="section-description">Tap vehicles or students to select for batch actions. Right-click or long-press to change status.</p>
         
         <!-- Ad-hoc Entry -->
         <div class="adhoc-entry">

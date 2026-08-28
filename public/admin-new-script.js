@@ -14,6 +14,50 @@ let adminSettings = {
     pathwayLabel: 'Pathway'
 };
 
+function getSelectedVehicleTypes() {
+    return Array.from(document.querySelectorAll('[data-vehicle-type-filter]'))
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+}
+
+function getAllVehicleTypeOptions() {
+    return Array.from(document.querySelectorAll('[data-vehicle-type-filter]'))
+        .map(cb => cb.value);
+}
+
+function isVehicleTypeFilterActive(selectedTypes) {
+    const allTypes = getAllVehicleTypeOptions();
+    return selectedTypes.length > 0 && selectedTypes.length < allTypes.length;
+}
+
+function vehicleMatchesTypeFilter(vehicleType, selectedTypes) {
+    if (!isVehicleTypeFilterActive(selectedTypes)) {
+        return true;
+    }
+    return selectedTypes.includes(vehicleType);
+}
+
+function restoreVehicleTypeFilters() {
+    const checkboxes = document.querySelectorAll('[data-vehicle-type-filter]');
+    const savedMulti = localStorage.getItem('adminVehicleTypeFilterMulti');
+    const savedLegacy = localStorage.getItem('adminVehicleFilter');
+
+    if (savedMulti !== null) {
+        const types = JSON.parse(savedMulti);
+        checkboxes.forEach(cb => {
+            cb.checked = types.includes(cb.value);
+        });
+    } else if (savedLegacy && ['bus', 'taxi', 'parent', 'adhoc'].includes(savedLegacy)) {
+        checkboxes.forEach(cb => {
+            cb.checked = cb.value === savedLegacy;
+        });
+    }
+}
+
+function persistVehicleTypeFilters() {
+    localStorage.setItem('adminVehicleTypeFilterMulti', JSON.stringify(getSelectedVehicleTypes()));
+}
+
 // Settings Management Functions
 async function loadAdminSettings() {
     // Load UI settings from server
@@ -447,7 +491,21 @@ async function logout() {
 }
 
 // Initialize the application
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+                console.log('ServiceWorker registration successful:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('ServiceWorker registration failed:', error);
+            });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
+    registerServiceWorker();
+
     // Load and apply theme settings
     await loadAdminThemeSettings();
     
@@ -459,10 +517,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadAllVehicles();
     
     // Set up filter functionality
-    const vehicleFilter = document.getElementById('vehicleFilter');
+    const statusFilter = document.getElementById('statusFilter');
     const pathwayFilter = document.getElementById('pathwayFilter');
     const sortBy = document.getElementById('sortBy');
-    vehicleFilter.addEventListener('change', applyFilters);
+    const vehicleTypeCheckboxes = document.querySelectorAll('[data-vehicle-type-filter]');
+
+    restoreVehicleTypeFilters();
+    const savedStatus = localStorage.getItem('adminStatusFilter');
+    if (savedStatus !== null) statusFilter.value = savedStatus;
+
+    vehicleTypeCheckboxes.forEach(cb => cb.addEventListener('change', applyFilters));
+    statusFilter.addEventListener('change', applyFilters);
     pathwayFilter.addEventListener('change', applyFilters);
     sortBy.addEventListener('change', handleSortChange);
     
@@ -611,7 +676,7 @@ function displayBuses() {
                     <div class="bus-student-count">${studentCount} student${studentCount !== 1 ? 's' : ''}</div>
                     ${bus.students.length > 0 ? `
                         <div style="margin-top: 0.5rem; font-size: 0.7rem;">
-                            ${bus.students.slice(0, 3).map(s => s.name).join(', ')}
+                            ${bus.students.slice(0, 3).map(s => escapeHtml(s.name)).join(', ')}
                             ${bus.students.length > 3 ? `<br>+${bus.students.length - 3} more` : ''}
                         </div>
                     ` : ''}
@@ -1224,18 +1289,22 @@ async function addAdhocVehicle() {
 
 // Apply filters
 function applyFilters() {
-    const vehicleFilter = document.getElementById('vehicleFilter').value;
+    const selectedTypes = getSelectedVehicleTypes();
+    const statusFilter = document.getElementById('statusFilter').value;
     const pathwayFilter = document.getElementById('pathwayFilter').value;
     
     let filtered = [...allVehicles];
     
-    // Apply vehicle filter
-    if (vehicleFilter) {
-        if (['bus', 'taxi', 'parent', 'adhoc'].includes(vehicleFilter)) {
-            filtered = filtered.filter(vehicle => vehicle.type === vehicleFilter);
-        } else if (['arrived', 'partial', 'not-arrived', 'absent'].includes(vehicleFilter)) {
-            filtered = filtered.filter(vehicle => vehicle.status === vehicleFilter);
-        }
+    // Apply vehicle type filter
+    if (selectedTypes.length === 0) {
+        filtered = [];
+    } else if (isVehicleTypeFilterActive(selectedTypes)) {
+        filtered = filtered.filter(vehicle => vehicleMatchesTypeFilter(vehicle.type, selectedTypes));
+    }
+
+    // Apply status filter
+    if (statusFilter) {
+        filtered = filtered.filter(vehicle => vehicle.status === statusFilter);
     }
     
     // Apply pathway filter
@@ -1243,6 +1312,18 @@ function applyFilters() {
         filtered = filtered.filter(vehicle => 
             vehicle.students.some(student => student.pathway === pathwayFilter)
         );
+    }
+
+    persistVehicleTypeFilters();
+    localStorage.setItem('adminStatusFilter', statusFilter);
+
+    const busSection = document.querySelector('.bus-admin-section');
+    const taxiSection = document.querySelector('.taxi-admin-section');
+    if (busSection) {
+        busSection.style.display = selectedTypes.includes('bus') ? 'block' : 'none';
+    }
+    if (taxiSection) {
+        taxiSection.style.display = selectedTypes.some(type => ['taxi', 'parent', 'adhoc'].includes(type)) ? 'block' : 'none';
     }
     
     filteredVehicles = filtered;
@@ -1390,39 +1471,47 @@ function escapeHtml(text) {
 }
 
 // Sorting functionality
+function vehicleTypeSortOrder(type) {
+    if (type === 'bus') return 0;
+    if (type === 'taxi') return 1;
+    if (type === 'parent') return 2;
+    if (type === 'adhoc') return 3;
+    return 4;
+}
+
 function applySorting() {
     const sortBy = document.getElementById('sortBy').value;
+    const statusOrder = { 'arrived': 0, 'partial': 1, 'not-arrived': 2, 'absent': 3 };
     
     filteredVehicles.sort((a, b) => {
         switch (sortBy) {
-            case 'numerical':
-                // Sort by vehicle type first (Bus < Taxi), then by number
-                if (a.type !== b.type) {
-                    return a.type === 'Bus' ? -1 : 1;
+            case 'numerical': {
+                const typeCmp = vehicleTypeSortOrder(a.type) - vehicleTypeSortOrder(b.type);
+                if (typeCmp !== 0) return typeCmp;
+                if (a.type === 'adhoc' || b.type === 'adhoc') {
+                    return (a.description || '').localeCompare(b.description || '');
                 }
-                return a.number - b.number;
+                return parseInt(a.number, 10) - parseInt(b.number, 10);
+            }
                 
             case 'newest':
-                // Sort by creation time (newest first)
-                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                return new Date(b.lastModified || b.createdAt || 0) - new Date(a.lastModified || a.createdAt || 0);
                 
             case 'oldest':
-                // Sort by creation time (oldest first)
-                return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                return new Date(a.lastModified || a.createdAt || 0) - new Date(b.lastModified || b.createdAt || 0);
                 
-            case 'status':
-                // Sort by status (Arrived, Departed, Not Arrived)
-                const statusOrder = { 'Arrived': 0, 'Departed': 1, 'Not Arrived': 2 };
-                if (a.type === 'Bus' && b.type === 'Bus') {
-                    return statusOrder[a.status] - statusOrder[b.status];
-                } else if (a.type === 'Taxi' && b.type === 'Taxi') {
-                    // For taxis, count arrived students
-                    const aArrived = a.students.filter(s => s.status === 'Arrived').length;
-                    const bArrived = b.students.filter(s => s.status === 'Arrived').length;
-                    return bArrived - aArrived;
-                } else {
-                    return a.type === 'Bus' ? -1 : 1;
+            case 'status': {
+                if (a.type === 'bus' || a.type === 'adhoc') {
+                    if (b.type === 'bus' || b.type === 'adhoc') {
+                        return (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4);
+                    }
+                    return -1;
                 }
+                if (b.type === 'bus' || b.type === 'adhoc') return 1;
+                const aArrived = a.students.filter(s => s.status === 'arrived').length;
+                const bArrived = b.students.filter(s => s.status === 'arrived').length;
+                return bArrived - aArrived;
+            }
                 
             default:
                 return 0;

@@ -102,6 +102,13 @@ describe('Health & Public Endpoints', () => {
         });
         assert.strictEqual(res.status, 200);
     });
+
+    it('GET /api/log/insights/public returns alerts without auth', async () => {
+        const res = await request('GET', '/api/log/insights/public?days=14');
+        assert.strictEqual(res.status, 200);
+        assert.ok(Array.isArray(res.body.insights));
+        res.body.insights.forEach(i => assert.ok(['alert', 'warning'].includes(i.type)));
+    });
 });
 
 describe('Authentication', () => {
@@ -173,5 +180,19 @@ describe('Authenticated Operations', () => {
         const res = await request('POST', '/api/reset/afternoon', null, cookies);
         assert.strictEqual(res.status, 200);
         assert.ok(res.body.success);
+    });
+
+    it('POST /api/vehicles/adhoc creates an ad-hoc vehicle', async () => {
+        if (!cookies) return;
+        const res = await request('POST', '/api/vehicles/adhoc', { description: 'Test Private Taxi' }, cookies);
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.body.vehicle.type, 'adhoc');
+        assert.strictEqual(res.body.vehicle.description, 'Test Private Taxi');
+        assert.strictEqual(res.body.vehicle.status, 'arrived');
+
+        const vehicles = (await request('GET', '/api/vehicles')).body;
+        const adhoc = vehicles.find(v => v.description === 'Test Private Taxi');
+        assert.ok(adhoc);
+        assert.strictEqual(adhoc.type, 'adhoc');
     });
 });

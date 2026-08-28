@@ -32,13 +32,24 @@
             <h3>📋 Controls</h3>
             
             <div class="control-group">
-                <label>Filter by Vehicle Type:</label>
-                <select id="vehicleTypeFilter" class="filter-select" aria-label="Filter by vehicle type">
-                    <option value="">All Vehicles</option>
-                    <option value="bus">Buses Only</option>
-                    <option value="taxi">Taxis Only</option>
-                    <option value="parent">Parent Drop Only</option>
-                </select>
+                <label>Vehicle Types:</label>
+                <div class="filter-checkboxes" role="group" aria-label="Filter by vehicle type">
+                    <label class="checkbox-label">
+                        <input type="checkbox" data-vehicle-type-filter value="bus" checked>
+                        <span class="checkmark"></span>
+                        Buses
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" data-vehicle-type-filter value="taxi" checked>
+                        <span class="checkmark"></span>
+                        Taxis
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" data-vehicle-type-filter value="parent" checked>
+                        <span class="checkmark"></span>
+                        Parent Drop-offs
+                    </label>
+                </div>
             </div>
             
             <div class="control-group">

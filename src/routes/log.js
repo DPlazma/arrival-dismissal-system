@@ -39,6 +39,23 @@ router.get('/date/:date', requireAuth, async (req, res) => {
     }
 });
 
+// Get smart insights (public display — alerts and warnings only)
+router.get('/insights/public', async (req, res) => {
+    try {
+        const days = Math.min(parseInt(req.query.days) || 14, 90);
+        const data = await generateInsights(days);
+        const insights = (data.insights || []).filter(i => i.type === 'alert' || i.type === 'warning');
+        res.json({
+            summary: data.summary,
+            daysAnalyzed: data.daysAnalyzed,
+            insights
+        });
+    } catch (error) {
+        console.error('Error generating public insights:', error);
+        res.status(500).json({ error: 'Error generating insights' });
+    }
+});
+
 // Get smart insights
 router.get('/insights', requireAuth, async (req, res) => {
     try {

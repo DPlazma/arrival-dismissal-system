@@ -89,6 +89,12 @@
     border-color: var(--secondary-color);
 }
 
+.filter-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 /* Checkbox styling */
 .checkbox-label {
     display: flex !important;
